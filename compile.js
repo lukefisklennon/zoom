@@ -1,26 +1,78 @@
 var fs = require("fs");
 
-var start = "#include \"/home/luke/zoom/zoom.h\"\nint main(int argc,char *argv[]){";
+var start = "#include \"zoom.h\"\nint main(int argc,char *argv[]){";
 var end = "}";
+var components = [];
 var names = {};
 var lines = [];
 var varId = 0;
+var name = "";
 
-module.exports = function(name) {
+var operators = [
+	{
+		symbol: "=",
+		process: function(parts, originalLine, lineNumber) {
+			var s = "assign";
+			var type = typeOf(parts[1]);
+			switch (type) {
+			case "NUMBER":
+				s += "Number";
+				break;
+			case "BOOLEAN":
+				s += "Boolean";
+				break;
+			case "STRING":
+				s += "String";
+			case "VAR":
+			default:
+				s += "Var";
+			}
+			s += "(" + parts[0] + "," + parts[1] + ")";
+			return s;
+		}
+	},
+	{
+		symbol: "+",
+		process: function(parts, originalLine, lineNumber) {
+			var s = "add(" + parts.length;
+			for (var i = 0; i < parts.length; i++) {
+				var type = typeOf(parts[i]);
+				if (type == "VAR") {
+					parts[i] += ".vnumber";
+				} else if (isRaw(parts[i]) && type != "NUMBER") {
+					warn("cannot add " + parts[i] + ": it is not a number", originalLine, lineNumber, "Zero will be used instead");
+					parts[i] = "0.0";
+				} else if (type == "NUMBER") {
+					parts[i] = floatify(parts[i]);
+				}
+				s += "," + parts[i];
+			}
+			s += ")";
+			return s;
+		}
+	}
+];
+
+module.exports = function(n) {
+	name = n;
     var file = fs.readFileSync(name, "utf8");
     file = file.trim();
     lines = file.split("\n");
 
-    for (var l in lines) {
-        lines[l] = processLine(lines[l]);
+    for (var i = 0; i < lines.length; i++) {
+        lines[i] = processLine(lines[i], i);
     }
 
-    var nameSection = [];
+	components.push(start);
+    var varComponent = "";
     for (n in names) {
-        nameSection += "V *" + names[n] + " = new V();";
+        varComponent += "Var *" + names[n] + " = new Var();";
     }
+	components.push(varComponent);
+	components.push(lines.join(";") + ";");
+	components.push(end);
 
-    console.log(start + nameSection + lines.join(";") + ";" + end);
+    console.log(components.join(""));
 }
 
 function formatLine(s) {
@@ -29,43 +81,22 @@ function formatLine(s) {
 		if (s[i] == " " && !inString) {
 			s = s.slice(0, i) + s.slice(i + 1);
 			i--;
-		} else if (s[i] == ("\"" || "'")) {
+		} else if (s[i] ==("\"" || "'")) {
 			inString = !inString;
 		}
 	}
     return s;
 }
 
-function processLine(s) {
-    s = formatLine(s).split("=");
-	if (s.length > 1) {
-		s[0] = nameToId(s[0]);
-		s[0] += "->a";
-		if (isNumber(s[1])) {
-			s[0] += "n(";
-		} else if (isBoolean(s[1])) {
-			s[0] += "b(";
-		} else if (isString(s[1])) {
-			s[0] += "s(";
-		} else {
-			s[0] += "v(";
+function processLine(s, lineNumber) {
+	var originalLine = s;
+	s = formatLine(s);
+	for (var i = 0; i < operators.length; i++) {
+		if (s.indexOf(operators[i].symbol) != -1) {
+			var parts = s.split(operators[i].symbol);
+			s = operators[i].process(parts, originalLine, lineNumber);
 		}
-		if (s[1].indexOf("+") != -1) {
-			var parts = s[1].split("+");
-			var types = [];
-			for (var p in parts) {
-				var type = typeOf(parts[p]);
-				if (type == null) {
-					types.push("TV");
-				} else {
-					types.push(type);
-				}
-			}
-			s[1] = "op(" + parts.length + "," + types.join(",") + "," + parts.join(",") + ")";
-		}
-		s[1] += ")";
 	}
-	s = s.join("");
     return s;
 }
 
@@ -83,11 +114,13 @@ function isRaw(s) {
 
 function typeOf(s) {
 	if (isNumber(s)) {
-		return "TN";
+		return "NUMBER";
 	} else if (isBoolean(s)) {
-		return "TB";
+		return "BOOLEAN";
 	} else if (isString(s)) {
-		return "TS";
+		return "STRING";
+	} else if (isVar(s)) {
+		return "VAR";
 	}
 	return null;
 }
@@ -109,5 +142,33 @@ function isBoolean(s) {
 }
 
 function isString(s) {
-	return (((s[0] == "\"") && (s[s.length - 1] == "\"")) || ((s[0] == "'") && (s[s.length - 1] == "'")));
+	return (((s[0] == "\"") &&(s[s.length - 1] == "\"")) || ((s[0] == "'") &&(s[s.length - 1] == "'")));
+}
+
+function containsOperator(s) {
+	for (var i = 0; i < operators.length; i++) {
+		if (s.indexOf(operators[i]) != -1) {
+			return true;
+		}
+	}
+	return false;
+}
+
+function isVar(s) {
+	return (!isNumber(s) && !isBoolean(s) && !isString(s) && !containsOperator(s));
+}
+
+function floatify(s) {
+	if (s.indexOf(".") == -1) {
+		s += ".0";
+	}
+	return s;
+}
+
+function warn(message, line, number, patch) {
+	console.log(name + ":" + (number + 1));
+	console.log("Warning: " + message);
+	console.log("  " + line + 1);
+	console.log("  " + patch);
+	console.log("");
 }

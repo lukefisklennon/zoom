@@ -3,11 +3,8 @@
 
 using namespace std;
 
-int main(int argc,char *argv[]) {
-	V *v = new V();
-	v->an(1917);
-	cout << v->vn << endl;
-	v->as("Hello world!");
-	cout << v->vs << endl;
-	op(2, TN, TS);
+int main(int argc,char *argv[]){
+	Var *v0 = new Var();
+	v0->assignNumber(add(7,1.0,0.0,23.4,0.0,19.0,0.0,17.0));
+	cout << v0->vnumber << endl;
 }
