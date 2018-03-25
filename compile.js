@@ -8,47 +8,95 @@ var lines = [];
 var varId = 0;
 var name = "";
 
+var type = {
+	undefined: "UNDEFINED",
+	number: "NUMBER",
+	boolean: "BOOLEAN",
+	string: "STRING",
+	object: "OBJECT",
+	array: "ARRAY",
+	var: "VAR"
+}
+
+class Expression {
+	constructor(string, location) {
+		this.location = location;
+		var foundOperator = false;
+		for (var o = 0; o < operators.length; o++) {
+			if (string.indexOf(operators[o].symbol) != -1) {
+				var parts = string.split(operators[o].symbol);
+				this.symbol = operators[o].symbol;
+				this.type = operators[o].type;
+				this.values = operators[o].process(parts, location);
+				foundOperator = true;
+				break;
+			}
+		}
+		if (!foundOperator) {
+			this.string = string;
+			if (isVar(string)) {
+				this.string = nameToId(string);
+			}
+			this.values = [];
+		}
+	}
+}
+
+class Location {
+	constructor(originalLine, lineNumber) {
+		this.originalLine = originalLine;
+		this.lineNumber = lineNumber + 1;
+	}
+}
+
 var operators = [
 	{
 		symbol: "=",
-		process: function(parts, originalLine, lineNumber) {
-			var s = "assign";
+		type: type.var,
+		number: 2,
+		start: function(parts, location) {
+			var string = "assign";
 			var type = typeOf(parts[1]);
 			switch (type) {
 			case "NUMBER":
-				s += "Number";
+				string += "Number";
 				break;
 			case "BOOLEAN":
-				s += "Boolean";
+				string += "Boolean";
 				break;
 			case "STRING":
-				s += "String";
+				string += "String";
 			case "VAR":
 			default:
-				s += "Var";
+				string += "Var";
 			}
-			s += "(" + parts[0] + "," + parts[1] + ")";
-			return s;
+			return string;
+		},
+		process: function(parts, location) {
+			return parts;
 		}
 	},
 	{
 		symbol: "+",
-		process: function(parts, originalLine, lineNumber) {
-			var s = "add(" + parts.length;
+		type: type.number,
+		number: -1,
+		start: function(parts) {
+			return "add";
+		},
+		process: function(parts, location) {
 			for (var i = 0; i < parts.length; i++) {
 				var type = typeOf(parts[i]);
 				if (type == "VAR") {
-					parts[i] += ".vnumber";
+					parts[i] += ".number";
 				} else if (isRaw(parts[i]) && type != "NUMBER") {
-					warn("cannot add " + parts[i] + ": it is not a number", originalLine, lineNumber, "Zero will be used instead");
+					warn("cannot add " + parts[i] + ": it is not a number", location, "Zero will be used instead");
 					parts[i] = "0.0";
 				} else if (type == "NUMBER") {
 					parts[i] = floatify(parts[i]);
 				}
-				s += "," + parts[i];
 			}
-			s += ")";
-			return s;
+			parts.unshift(String(parts.length));
+			return parts;
 		}
 	}
 ];
@@ -60,7 +108,7 @@ module.exports = function(n) {
     lines = file.split("\n");
 
     for (var i = 0; i < lines.length; i++) {
-        lines[i] = processLine(lines[i], i);
+        lines[i] = processLine(lines[i], new Location(lines[i], i));
     }
 
 	components.push(start);
@@ -88,21 +136,62 @@ function formatLine(s) {
     return s;
 }
 
-function processLine(s, lineNumber) {
-	var originalLine = s;
-	s = formatLine(s);
-	for (var i = 0; i < operators.length; i++) {
-		if (s.indexOf(operators[i].symbol) != -1) {
-			var parts = s.split(operators[i].symbol);
-			s = operators[i].process(parts, originalLine, lineNumber);
+function processLine(string, location) {
+	var expression = new Expression(formatLine(string), location);
+	var notDone = true;
+	while (notDone) {
+		notDone = expressionIterate(expression, function(array, position, string) {
+			array[position] = new Expression(string, location);
+		});
+	}
+	var parts = [expression];
+	var foundExpression = true;
+	while (foundExpression) {
+		foundExpression = false;
+		for (var i = 0; i < parts.length; i++) {
+			if (parts[i] instanceof Expression) {
+				var part = parts.splice(i, 1)[0];
+				if ("string" in part) {
+					parts.splice(i, 0, part.string);
+				} else {
+					parts.splice(i, 0, findOperator(part.symbol).start(part.values, location) + "(");
+					for (var j = 0; j < part.values.length; j++) {
+						var value = part.values[j];
+						if ("string" in value) {
+							value = value.string;
+							if (j < part.values.length - 1) {
+								value += ",";
+							}
+						}
+						parts.splice(i + j + 1, 0, value);
+					}
+					parts.splice(i + j + 1, 0, ")");
+				}
+				foundExpression = true;
+				break;
+			}
 		}
 	}
-    return s;
+    return parts.join("");
+}
+
+function expressionIterate(expression, action) {
+	var foundString = false;
+	for (var i = 0; i < expression.values.length; i++) {
+		var value = expression.values[i];
+		if (typeof value == "string") {
+			action(expression.values, i, value);
+			foundString = true;
+		} else {
+			expressionIterate(value, action);
+		}
+	}
+	return foundString;
 }
 
 function nameToId(name) {
     if (names[name] == undefined) {
-        names[name] = "v" + varId;
+        names[name] = "v" + varId.toString(16);
         varId++;
     }
     return names[name];
@@ -113,14 +202,22 @@ function isRaw(s) {
 }
 
 function typeOf(s) {
-	if (isNumber(s)) {
-		return "NUMBER";
-	} else if (isBoolean(s)) {
-		return "BOOLEAN";
-	} else if (isString(s)) {
-		return "STRING";
-	} else if (isVar(s)) {
-		return "VAR";
+	if (s instanceof Expression) {
+		if ("string" in s) {
+			return typeOf(s.string);
+		} else {
+			return s.type;
+		}
+	} else {
+		if (isNumber(s)) {
+			return "NUMBER";
+		} else if (isBoolean(s)) {
+			return "BOOLEAN";
+		} else if (isString(s)) {
+			return "STRING";
+		} else if (isVar(s)) {
+			return "VAR";
+		}
 	}
 	return null;
 }
@@ -147,15 +244,24 @@ function isString(s) {
 
 function containsOperator(s) {
 	for (var i = 0; i < operators.length; i++) {
-		if (s.indexOf(operators[i]) != -1) {
+		if (s.indexOf(operators[i].symbol) != -1) {
 			return true;
 		}
 	}
 	return false;
 }
 
+function findOperator(symbol) {
+	for (var i = 0; i < operators.length; i++) {
+		if (operators[i].symbol == symbol) {
+			return operators[i];
+		}
+	}
+	return null;
+}
+
 function isVar(s) {
-	return (!isNumber(s) && !isBoolean(s) && !isString(s) && !containsOperator(s));
+	return (!isNumber(s) && !isBoolean(s) && !isString(s) && !containsOperator(s) && s.indexOf(".") == -1);
 }
 
 function floatify(s) {
@@ -165,10 +271,10 @@ function floatify(s) {
 	return s;
 }
 
-function warn(message, line, number, patch) {
-	console.log(name + ":" + (number + 1));
+function warn(message, location, patch) {
+	console.log(name + ":" + location.lineNumber);
 	console.log("Warning: " + message);
-	console.log("  " + line + 1);
+	console.log("  " + location.originalLine);
 	console.log("  " + patch);
 	console.log("");
 }
