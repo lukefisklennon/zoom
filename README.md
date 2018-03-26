@@ -4,7 +4,7 @@ This is a brand-new programming language that's in its very earliest stages, so 
 
 ## Aim
 
-To create a modular, concise server-side language that's blazing fast. Developers will be able to write, concurrent, parallel and even distributed systems, all with the same syntax. Zoom will be dynamically typed and allocated, but compiled to native machine code.
+To create a modular, concise server-side language that's blazing fast. Developers will be able to create object-oriented, concurrent, parallel and even distributed systems, all with the same syntax. Zoom will be dynamically typed and allocated, but compiled to native machine code.
 
 ## How it works
 
