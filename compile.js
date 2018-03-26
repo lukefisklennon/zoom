@@ -3,10 +3,12 @@ var fs = require("fs");
 var start = "#include \"zoom.h\"\n#include <iostream>\nusing namespace std;\nint main(int argc,char *argv[]){";
 var end = "}";
 var components = [];
-var names = {};
+var vars = {};
+var functions = {};
 var lines = [];
 var varId = 0;
 var name = "";
+var nativeFunctions = ["print"];
 
 var type = {
 	undefined: "UNDEFINED",
@@ -29,7 +31,9 @@ module.exports = function(n) {
     }
 
 	components.push(start);
-	components.push("Var " + Object.values(names).join(",") + ";");
+	if (Object.keys(vars).length > 0) {
+		components.push("Var " + Object.values(vars).join(",") + ";");
+	}
 	components.push(lines.join(";") + ";");
 	components.push(end);
 
@@ -45,7 +49,7 @@ var operators = [
 		number: 2,
 		start: function(symbol, parts, location) {
 			var string = "assign";
-			var type = typeOf(parts[1]);
+			var type = new Expression(parts[1]).type;
 			switch (type) {
 			case "NUMBER":
 				string += "Number";
@@ -55,9 +59,11 @@ var operators = [
 				break;
 			case "STRING":
 				string += "String";
+				break;
 			case "VAR":
 			default:
 				string += "Var";
+				break;
 			}
 			return string;
 		},
@@ -70,6 +76,32 @@ var operators = [
 			return parts;
 		}
 	},
+	// {
+	// 	symbols: ["()"],
+	// 	type: type.var,
+	// 	number: -1,
+	// 	start: function(symbol, parts, location) {
+	// 		return nameToId(parts[0].split("(")[0], functions);
+	// 	},
+	// 	pre: function(symbol, parts, location) {
+	// 		parts[0] = parts[0].split("(")[1];
+	// 		var last = parts[parts.length - 1];
+	// 		parts[parts.length - 1] = last.substring(0, last.length - 1);
+	// 		return parts;
+	// 	},
+	// 	post: function(symbol, parts, location) {
+	// 		var a = [String(parts.length)];
+	// 		for (var i = 0; i < parts.length; i++) {
+	// 			var type = typeOf(parts[i]);
+	// 			a.push(type || "VAR");
+	// 			if (type == "NUMBER") {
+	// 				parts[i] = floatify(parts[i]);
+	// 			}
+	// 			a.push(parts[i]);
+	// 		}
+	// 		return a;
+	// 	}
+	// },
 	{
 		symbols: ["+", "-", "*", "/"],
 		names: {
@@ -112,27 +144,63 @@ for (var i = 0; i < operators.length; i++) {
 class Expression {
 	constructor(string, location) {
 		this.location = location;
-		var foundOperator = false;
+		this.values = [];
+		var noOperator = true;
+		var level = 0;
+		var start = 0
+		for (var i = 0; i < string.length; i++) {
+			if (string[i] == "(") {
+				noOperator = false;
+				level++;
+				if (level == 1) {
+					start = i;
+				}
+			} else if (string[i] == ")") {
+				level--;
+				if (level == 0) {
+					this.values.push(string.substring(start + 1, i));
+					string = string.substring(i + 1, string.length);
+					break;
+				}
+			}
+		}
+
 		for (var symbol in symbols) {
 			var operator = symbols[symbol];
 			if (string.indexOf(symbol) != -1) {
+				noOperator = false;
 				var parts = string.split(symbol);
+				if (parts[0] == "") {
+					parts.shift();
+				}
 				this.symbol = symbol;
 				this.type = operator.type;
+				this.start = operator.start(symbol, parts, location) + "(";
 				for (var i = 0; i < parts.length; i++) {
 					if (isVar(parts[i])) {
-						parts[i] = nameToId(parts[i]);
+						parts[i] = nameToId(parts[i], vars);
 					}
 				}
-				this.values = operator.process(symbol, parts, location);
-				foundOperator = true;
+				this.values.unshift(...operator.process(symbol, parts, location));
 				break;
 			}
 		}
-		if (!foundOperator) {
+
+		for (var i = 0; i < this.values.length; i++) {
+			if (!isRaw(this.values[i])) {
+				this.values[i] = new Expression(this.values[i]);
+			}
+		}
+
+		if (noOperator) {
 			this.string = string;
+			this.type = typeOf(string);
 			this.values = [];
 		}
+	}
+
+	isRaw() {
+		return ("string" in this);
 	}
 }
 
@@ -158,12 +226,6 @@ function formatLine(s) {
 
 function processLine(string, location) {
 	var expression = new Expression(formatLine(string), location);
-	var notDone = true;
-	while (notDone) {
-		notDone = expressionIterate(expression, function(array, position, string) {
-			array[position] = new Expression(string, location);
-		});
-	}
 	var parts = [expression];
 	var foundExpression = true;
 	while (foundExpression) {
@@ -171,10 +233,10 @@ function processLine(string, location) {
 		for (var i = 0; i < parts.length; i++) {
 			if (parts[i] instanceof Expression) {
 				var part = parts.splice(i, 1)[0];
-				if ("string" in part) {
+				if (part.isRaw()) {
 					parts.splice(i, 0, part.string);
 				} else {
-					var a = [symbols[part.symbol].start(part.symbol, part.values, location) + "("];
+					var a = [part.start];
 					for (var j = 0; j < part.values.length; j++) {
 						a.push(part.values[j]);
 						if (j < part.values.length - 1) {
@@ -192,26 +254,33 @@ function processLine(string, location) {
     return parts.join("");
 }
 
-function expressionIterate(expression, action) {
-	var foundString = false;
-	for (var i = 0; i < expression.values.length; i++) {
-		var value = expression.values[i];
-		if (typeof value == "string") {
-			action(expression.values, i, value);
-			foundString = true;
-		} else {
-			foundString = expressionIterate(value, action);
+// function expressionIterate(expression, action) {
+// 	var foundString = false;
+// 	for (var i = 0; i < expression.values.length; i++) {
+// 		var value = expression.values[i];
+// 		if (typeof value == "string") {
+// 			action(expression.values, i, value);
+// 			foundString = true;
+// 		} else {
+// 			foundString = expressionIterate(value, action);
+// 		}
+// 	}
+// 	return foundString;
+// }
+
+function nameToId(name, object) {
+	var prefix = "v";
+	if (object == functions) {
+		prefix = "f";
+		if (nativeFunctions.indexOf(name) != -1) {
+			return name;
 		}
 	}
-	return foundString;
-}
-
-function nameToId(name) {
-    if (names[name] == undefined) {
-        names[name] = "v" + varId.toString(16);
+    if (object[name] == undefined) {
+        object[name] = "v" + varId.toString(16);
         varId++;
     }
-    return names[name];
+    return object[name];
 }
 
 function isRaw(s) {
@@ -220,7 +289,7 @@ function isRaw(s) {
 
 function typeOf(s) {
 	if (s instanceof Expression) {
-		if ("string" in s) {
+		if (part.isRaw()) {
 			return typeOf(s.string);
 		} else {
 			return s.type;
@@ -238,6 +307,19 @@ function typeOf(s) {
 	}
 	return null;
 }
+
+// function resolveType(string) {
+// 	var expression = new Expression(string);
+// 	if (expression.group) {
+// 		return resolveType(expression.values[0]);
+// 	} else {
+// 		if (expression.isRaw()) {
+// 			return typeOf(expression.string);
+// 		} else {
+// 			return expression.type;
+// 		}
+// 	}
+// }
 
 function isNumber(s) {
 	var type = typeof s;

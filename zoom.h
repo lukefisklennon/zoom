@@ -64,21 +64,25 @@ void assignString(Var *v, String s) {
 	v->string = s;
 }
 
-Number calc(byte type, int n, ...) {
+Number calc(byte operation, int n, ...) {
 	va_list args;
     va_start(args, n);
 	Number result = 0;
-	if (type == MULTIPLY || type == DIVIDE) {
+	if (operation == MULTIPLY || operation == DIVIDE) {
 		result = 1;
 	}
 	for (int i = 0; i < n; i++) {
 		Number value = va_arg(args, Number);
-		switch (type) {
+		switch (operation) {
 		case ADD:
 			result += value;
 			break;
 		case SUBTRACT:
-			result -= value;
+			if (i == 0) {
+				result += value;
+			} else {
+				result -= value;
+			}
 			break;
 		case MULTIPLY:
 			result *= value;
@@ -92,16 +96,36 @@ Number calc(byte type, int n, ...) {
 	return result;
 }
 
-void print(byte type, ...) {
+void print(int n, ...) {
 	va_list args;
-    va_start(args, 1);
-	if (type == STRING) {
-		String value = va_arg(args, Number);
-		std::cout << value << std::endl;
-	} else {
-		Var *value = va_arg(args, Var *);
-		if (value.type == STRING) {
-			std::cout << value.string << std::endl;
+    va_start(args, n);
+	for (int i = 0; i < n; i++) {
+		byte type = va_arg(args, unsigned int);
+		if (type == VAR) {
+			Var value = va_arg(args, Var);
+			switch (value.type) {
+			case STRING:
+				std::cout << value.string << std::endl;
+				break;
+			case NUMBER:
+				std::cout << value.number << std::endl;
+				break;
+			case BOOLEAN:
+				std::cout << value.boolean << std::endl;
+				break;
+			}
+		} else {
+			switch (type) {
+			case STRING:
+				std::cout << va_arg(args, char *) << std::endl;
+				break;
+			case NUMBER:
+				std::cout << va_arg(args, Number) << std::endl;
+				break;
+			case BOOLEAN:
+				std::cout << va_arg(args, int) << std::endl;
+				break;
+			}
 		}
 	}
 	va_end(args);
