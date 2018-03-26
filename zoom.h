@@ -11,6 +11,11 @@
 #define ARRAY 5
 #define VAR 255
 
+#define ADD 1
+#define SUBTRACT 2
+#define MULTIPLY 3
+#define DIVIDE 4
+
 typedef unsigned char byte;
 
 typedef double Number;
@@ -59,14 +64,45 @@ void assignString(Var *v, String s) {
 	v->string = s;
 }
 
-Number add(int n, ...) {
+Number calc(byte type, int n, ...) {
 	va_list args;
     va_start(args, n);
 	Number result = 0;
+	if (type == MULTIPLY || type == DIVIDE) {
+		result = 1;
+	}
 	for (int i = 0; i < n; i++) {
 		Number value = va_arg(args, Number);
-		result += value;
+		switch (type) {
+		case ADD:
+			result += value;
+			break;
+		case SUBTRACT:
+			result -= value;
+			break;
+		case MULTIPLY:
+			result *= value;
+			break;
+		case DIVIDE:
+			result /= value;
+			break;
+		}
 	}
 	va_end(args);
 	return result;
+}
+
+void print(byte type, ...) {
+	va_list args;
+    va_start(args, 1);
+	if (type == STRING) {
+		String value = va_arg(args, Number);
+		std::cout << value << std::endl;
+	} else {
+		Var *value = va_arg(args, Var *);
+		if (value.type == STRING) {
+			std::cout << value.string << std::endl;
+		}
+	}
+	va_end(args);
 }

@@ -1,6 +1,6 @@
 var fs = require("fs");
 
-var start = "#include \"zoom.h\"\nint main(int argc,char *argv[]){";
+var start = "#include \"zoom.h\"\n#include <iostream>\nusing namespace std;\nint main(int argc,char *argv[]){";
 var end = "}";
 var components = [];
 var names = {};
@@ -18,43 +18,32 @@ var type = {
 	var: "VAR"
 }
 
-class Expression {
-	constructor(string, location) {
-		this.location = location;
-		var foundOperator = false;
-		for (var o = 0; o < operators.length; o++) {
-			if (string.indexOf(operators[o].symbol) != -1) {
-				var parts = string.split(operators[o].symbol);
-				this.symbol = operators[o].symbol;
-				this.type = operators[o].type;
-				this.values = operators[o].process(parts, location);
-				foundOperator = true;
-				break;
-			}
-		}
-		if (!foundOperator) {
-			this.string = string;
-			if (isVar(string)) {
-				this.string = nameToId(string);
-			}
-			this.values = [];
-		}
-	}
-}
+module.exports = function(n) {
+	name = n;
+    var file = fs.readFileSync(name, "utf8");
+    file = file.trim();
+    lines = file.split("\n");
 
-class Location {
-	constructor(originalLine, lineNumber) {
-		this.originalLine = originalLine;
-		this.lineNumber = lineNumber + 1;
-	}
+    for (var i = 0; i < lines.length; i++) {
+        lines[i] = processLine(lines[i], new Location(lines[i], i));
+    }
+
+	components.push(start);
+	components.push("Var " + Object.values(names).join(",") + ";");
+	components.push(lines.join(";") + ";");
+	components.push(end);
+
+    var output = components.join("");
+	console.log(output);
+	fs.writeFileSync(name.split(".")[0] + ".cpp", output);
 }
 
 var operators = [
 	{
-		symbol: "=",
+		symbols: ["="],
 		type: type.var,
 		number: 2,
-		start: function(parts, location) {
+		start: function(symbol, parts, location) {
 			var string = "assign";
 			var type = typeOf(parts[1]);
 			switch (type) {
@@ -72,55 +61,86 @@ var operators = [
 			}
 			return string;
 		},
-		process: function(parts, location) {
+		process: function(symbol, parts, location) {
+			for (var i = 0; i < parts.length; i++) {
+				if (isVar(parts[i])) {
+					parts[i] = "&" + parts[i];
+				}
+			}
 			return parts;
 		}
 	},
 	{
-		symbol: "+",
+		symbols: ["+", "-", "*", "/"],
+		names: {
+			"+": "ADD",
+			"-": "SUBTRACT",
+			"*": "MULTIPLY",
+			"/": "DIVIDE"
+		},
 		type: type.number,
 		number: -1,
-		start: function(parts) {
-			return "add";
+		start: function(symbol, parts, location) {
+			return "calc";
 		},
-		process: function(parts, location) {
+		process: function(symbol, parts, location) {
 			for (var i = 0; i < parts.length; i++) {
 				var type = typeOf(parts[i]);
 				if (type == "VAR") {
 					parts[i] += ".number";
 				} else if (isRaw(parts[i]) && type != "NUMBER") {
-					warn("cannot add " + parts[i] + ": it is not a number", location, "Zero will be used instead");
+					warn("cannot add `" + parts[i] + "`: it is not a number", location, "Zero will be used instead");
 					parts[i] = "0.0";
 				} else if (type == "NUMBER") {
 					parts[i] = floatify(parts[i]);
 				}
 			}
 			parts.unshift(String(parts.length));
+			parts.unshift(this.names[symbol]);
 			return parts;
 		}
 	}
 ];
 
-module.exports = function(n) {
-	name = n;
-    var file = fs.readFileSync(name, "utf8");
-    file = file.trim();
-    lines = file.split("\n");
+var symbols = {};
+for (var i = 0; i < operators.length; i++) {
+	for (var j = 0; j < operators[i].symbols.length; j++) {
+		symbols[operators[i].symbols[j]] = operators[i];
+	}
+}
 
-    for (var i = 0; i < lines.length; i++) {
-        lines[i] = processLine(lines[i], new Location(lines[i], i));
-    }
+class Expression {
+	constructor(string, location) {
+		this.location = location;
+		var foundOperator = false;
+		for (var symbol in symbols) {
+			var operator = symbols[symbol];
+			if (string.indexOf(symbol) != -1) {
+				var parts = string.split(symbol);
+				this.symbol = symbol;
+				this.type = operator.type;
+				for (var i = 0; i < parts.length; i++) {
+					if (isVar(parts[i])) {
+						parts[i] = nameToId(parts[i]);
+					}
+				}
+				this.values = operator.process(symbol, parts, location);
+				foundOperator = true;
+				break;
+			}
+		}
+		if (!foundOperator) {
+			this.string = string;
+			this.values = [];
+		}
+	}
+}
 
-	components.push(start);
-    var varComponent = "";
-    for (n in names) {
-        varComponent += "Var *" + names[n] + " = new Var();";
-    }
-	components.push(varComponent);
-	components.push(lines.join(";") + ";");
-	components.push(end);
-
-    console.log(components.join(""));
+class Location {
+	constructor(originalLine, lineNumber) {
+		this.originalLine = originalLine;
+		this.lineNumber = lineNumber + 1;
+	}
 }
 
 function formatLine(s) {
@@ -154,18 +174,15 @@ function processLine(string, location) {
 				if ("string" in part) {
 					parts.splice(i, 0, part.string);
 				} else {
-					parts.splice(i, 0, findOperator(part.symbol).start(part.values, location) + "(");
+					var a = [symbols[part.symbol].start(part.symbol, part.values, location) + "("];
 					for (var j = 0; j < part.values.length; j++) {
-						var value = part.values[j];
-						if ("string" in value) {
-							value = value.string;
-							if (j < part.values.length - 1) {
-								value += ",";
-							}
+						a.push(part.values[j]);
+						if (j < part.values.length - 1) {
+							a.push(",");
 						}
-						parts.splice(i + j + 1, 0, value);
 					}
-					parts.splice(i + j + 1, 0, ")");
+					a.push(")");
+					parts.splice(i, 0, ...a);
 				}
 				foundExpression = true;
 				break;
@@ -183,7 +200,7 @@ function expressionIterate(expression, action) {
 			action(expression.values, i, value);
 			foundString = true;
 		} else {
-			expressionIterate(value, action);
+			foundString = expressionIterate(value, action);
 		}
 	}
 	return foundString;
@@ -239,25 +256,16 @@ function isBoolean(s) {
 }
 
 function isString(s) {
-	return (((s[0] == "\"") &&(s[s.length - 1] == "\"")) || ((s[0] == "'") &&(s[s.length - 1] == "'")));
+	return (((s[0] == "\"") && (s[s.length - 1] == "\"")) || ((s[0] == "'") && (s[s.length - 1] == "'")));
 }
 
 function containsOperator(s) {
-	for (var i = 0; i < operators.length; i++) {
-		if (s.indexOf(operators[i].symbol) != -1) {
+	for (var symbol in symbols) {
+		if (s.indexOf(symbol) != -1) {
 			return true;
 		}
 	}
 	return false;
-}
-
-function findOperator(symbol) {
-	for (var i = 0; i < operators.length; i++) {
-		if (operators[i].symbol == symbol) {
-			return operators[i];
-		}
-	}
-	return null;
 }
 
 function isVar(s) {
