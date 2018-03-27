@@ -1,3 +1,5 @@
+// std::cout<<v0.number<<std::endl;
+
 #include <cstddef>
 #include <string>
 #include <cstdarg>
@@ -32,7 +34,7 @@ struct Var {
 	}
 };
 
-void assignVar(Var *v1, Var* v2) {
+void assign(Var *v1, Var* v2) {
 	v1->type = v2->type;
 	if (v1->type != UNDEFINED) {
 		switch (v1->type) {
@@ -49,17 +51,17 @@ void assignVar(Var *v1, Var* v2) {
 	}
 }
 
-void assignNumber(Var *v, Number n) {
+void assign(Var *v, Number n) {
 	v->type = NUMBER;
 	v->number = n;
 }
 
-void assignBoolean(Var *v, Boolean b) {
+void assign(Var *v, Boolean b) {
 	v->type = BOOLEAN;
 	v->boolean = b;
 }
 
-void assignString(Var *v, String s) {
+void assign(Var *v, String s) {
 	v->type = STRING;
 	v->string = s;
 }

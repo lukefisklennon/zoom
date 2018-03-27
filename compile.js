@@ -1,4 +1,5 @@
 var fs = require("fs");
+var exec = require(__dirname + "/exec.js");
 
 var start = "#include \"zoom.h\"\n#include <iostream>\nusing namespace std;\nint main(int argc,char *argv[]){";
 var end = "}";
@@ -20,7 +21,7 @@ var type = {
 	var: "VAR"
 }
 
-module.exports = function(n) {
+module.exports = function(n, callback) {
 	name = n;
     var file = fs.readFileSync(name, "utf8");
     file = file.trim();
@@ -38,8 +39,13 @@ module.exports = function(n) {
 	components.push(end);
 
     var output = components.join("");
-	console.log(output);
-	fs.writeFileSync(name.split(".")[0] + ".cpp", output);
+	// console.log(output);
+	var cppName = name.split(".")[0] + ".cpp";
+	var binName = name.split(".")[0] + ".bin";
+	fs.writeFileSync(cppName, output);
+	exec("g++ " + cppName + " -o " + binName, function() {
+		if (callback) callback();
+	});
 }
 
 var operators = [
@@ -47,61 +53,16 @@ var operators = [
 		symbols: ["="],
 		type: type.var,
 		number: 2,
-		start: function(symbol, children, location) {
-			var string = "assign";
-			var type = children[1].type;
-			switch (type) {
-			case "NUMBER":
-				string += "Number";
-				break;
-			case "BOOLEAN":
-				string += "Boolean";
-				break;
-			case "STRING":
-				string += "String";
-				break;
-			case "VAR":
-			default:
-				string += "Var";
-				break;
-			}
-			return string;
-		},
+		start: "assign",
 		process: function(symbol, children, location) {
 			for (var i = 0; i < children.length; i++) {
-				if (children[i].type == "VAR") {
+				if (children[i] instanceof Value && children[i].type == "VAR") {
 					children[i].string = "&" + children[i].string;
 				}
 			}
 			return children;
 		}
 	},
-	// {
-	// 	symbols: ["()"],
-	// 	type: type.var,
-	// 	number: -1,
-	// 	start: function(symbol, parts, location) {
-	// 		return nameToId(parts[0].split("(")[0], functions);
-	// 	},
-	// 	pre: function(symbol, parts, location) {
-	// 		parts[0] = parts[0].split("(")[1];
-	// 		var last = parts[parts.length - 1];
-	// 		parts[parts.length - 1] = last.substring(0, last.length - 1);
-	// 		return parts;
-	// 	},
-	// 	post: function(symbol, parts, location) {
-	// 		var a = [String(parts.length)];
-	// 		for (var i = 0; i < parts.length; i++) {
-	// 			var type = typeOf(parts[i]);
-	// 			a.push(type || "VAR");
-	// 			if (type == "NUMBER") {
-	// 				parts[i] = floatify(parts[i]);
-	// 			}
-	// 			a.push(parts[i]);
-	// 		}
-	// 		return a;
-	// 	}
-	// },
 	{
 		symbols: ["+", "-", "*", "/"],
 		names: {
@@ -112,9 +73,7 @@ var operators = [
 		},
 		type: type.number,
 		number: -1,
-		start: function(symbol, children, location) {
-			return "calc";
-		},
+		start: "calc",
 		process: function(symbol, children, location) {
 			for (var i = 0; i < children.length; i++) {
 				var type = children[i].type;
@@ -128,6 +87,19 @@ var operators = [
 		}
 	}
 ];
+
+var functionOperator = {
+	type: type.var,
+	number: -1,
+	process: function(symbol, children, location) {
+		var a = [String(children.length)];
+		for (var i = 0; i < children.length; i++) {
+			a.push(children[i].type);
+			a.push(children[i]);
+		}
+		return a;
+	}
+}
 
 var symbols = {};
 for (var i = 0; i < operators.length; i++) {
@@ -151,41 +123,54 @@ class Value {
 
 class Expression {
 	constructor(string, location) {
-		var level = 0;
-		var start = -1;
-		var groups = [];
 		this.string = string;
 		this.children = [];
 		this.location = location;
-		for (var i = 0; i < string.length; i++) {
-			if (start == -1 && string[i] in symbols) {
-				break;
-			} else if (string[i] == "(") {
+		this.start = "";
+		var level = 0;
+		var start = -1;
+		var groups = [];
+		var hasOperator = false;
+		for (var i = 0; i < this.string.length; i++) {
+			if (level == 0 && this.string[i] in symbols) {
+				hasOperator = true;
+			} else if (this.string[i] == "(") {
 				level++;
 				if (level == 1) {
 					start = i;
 				}
-			} else if (string[i] == ")") {
+			} else if (this.string[i] == ")") {
 				level--;
 				if (level == 0) {
-					var group = string.substring(start + 1, i);
+					var group = this.string.substring(start + 1, i);
 					groups.push(group);
-					string = string.replace(group, "");
+					this.string = this.string.replace(group, "");
 					i -= group.length;
 				}
 			}
 		}
-		for (var symbol in symbols) {
-			if (string.indexOf(symbol) != -1) {
-				this.children.push(...string.split(symbol));
-				this.symbol = symbol;
-				this.operator = symbols[symbol];
-				break;
+		if (this.string == "()") {
+			this.string = groups[0];
+		} else if (groups.length > 0 && !hasOperator) {
+			this.string = this.string.replace("()", "(" + groups[0] + ")");
+			var parts = this.string.split("(");
+			this.children = parts[1].substring(0, parts[1].length - 1).split(",");
+			this.operator = functionOperator;
+			this.start = parts[0];
+		} else {
+			for (var symbol in symbols) {
+				if (this.string.indexOf(symbol) != -1) {
+					this.children = this.string.split(symbol);
+					this.symbol = symbol;
+					this.operator = symbols[symbol];
+					this.start = this.operator.start;
+					break;
+				}
 			}
 		}
 		for (var i = 0; i < this.children.length; i++) {
-			if (this.children[i] == "()") {
-				this.children[i] = groups[0];
+			if (this.children[i].indexOf("()") != -1) {
+				this.children[i] = this.children[i].replace("()", "(" + groups[0] + ")");
 				groups.shift();
 			}
 			if (isExpression(this.children[i])) {
@@ -194,25 +179,7 @@ class Expression {
 				this.children[i] = new Value(this.children[i], location);
 			}
 		}
-		this.type = symbols[this.symbol].type;
-	}
-	process() {
-		var parts = [];
-		for (var i = 0; i < this.children.length; i++) {
-			var child = this.children[i];
-			if (typeof child == "string") {
-				if (typeOf(child) == "VAR") {
-					parts.push(nameToId(child, vars));
-				} else if (typeOf(child) == "NUMBER") {
-					parts.push(floatify(child));
-				} else {
-					parts.push(child);
-				}
-			} else {
-				parts.push(...this.operator.process(this.symbol, this.children, this.location));
-			}
-		}
-		return parts;
+		this.type = this.operator.type;
 	}
 }
 
@@ -229,7 +196,7 @@ function formatLine(s) {
 		if (s[i] == " " && !inString) {
 			s = s.slice(0, i) + s.slice(i + 1);
 			i--;
-		} else if (s[i] ==("\"" || "'")) {
+		} else if (s[i] == ("\"" || "'")) {
 			inString = !inString;
 		}
 	}
@@ -237,35 +204,33 @@ function formatLine(s) {
 }
 
 function processLine(string, location) {
-	var parts = new Expression(formatLine(string), location).process();
-	console.log(JSON.stringify(parts, null, 2));
-	// var parts = [expression];
-	// var foundExpression = true;
-	// while (foundExpression) {
-	// 	foundExpression = false;
-	// 	for (var i = 0; i < parts.length; i++) {
-	// 		if (parts[i] instanceof Expression) {
-	// 			var part = parts.splice(i, 1)[0];
-	// 			if (part.isRaw()) {
-	// 				parts.splice(i, 0, part.string);
-	// 			} else {
-	// 				var a = [part.start];
-	// 				for (var j = 0; j < part.values.length; j++) {
-	// 					a.push(part.values[j]);
-	// 					if (j < part.values.length - 1) {
-	// 						a.push(",");
-	// 					}
-	// 				}
-	// 				a.push(")");
-	// 				parts.splice(i, 0, ...a);
-	// 			}
-	// 			foundExpression = true;
-	// 			break;
-	// 		}
-	// 	}
-	// }
-    // return parts.join("");
-	return "";
+	var parts = [new Expression(formatLine(string), location)];
+	var foundExpression = true;
+	while (foundExpression) {
+		foundExpression = false;
+		for (var i = 0; i < parts.length; i++) {
+			if (parts[i] instanceof Expression) {
+				var a = [parts[i].start + "("];
+				var children = parts[i].operator.process(parts[i].symbol, parts[i].children, parts[i].location);
+				for (var j = 0; j < children.length; j++) {
+					a.push(children[j]);
+					if (j < children.length - 1) {
+						a.push(",");
+					}
+				}
+				a.push(")");
+				parts.splice(i, 1);
+				parts.splice(i, 0, ...a);
+				foundExpression = true;
+			}
+		}
+	}
+	for (var i = 0; i < parts.length; i++) {
+		if (parts[i] instanceof Value) {
+			parts[i] = parts[i].string;
+		}
+	}
+    return parts.join("");
 }
 
 function nameToId(name, object) {
