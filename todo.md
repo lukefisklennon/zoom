@@ -1,0 +1,8 @@
+- [ ] Ignore characters within quotes
+- [ ] Single- and multi-line comments
+- [ ] Block trees
+- [ ] If statements, for loops and while loops
+- [ ] Function definitions
+- [ ] Complex data types (lists and maps)
+- [ ] Module definition, loading and access
+- [ ] Native module support

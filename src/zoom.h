@@ -144,11 +144,7 @@ Number calc(byte operation, ARGS) {
 			result += number;
 			break;
 		case SUBTRACT:
-			if (i == 0) {
-				result += number;
-			} else {
-				result -= number;
-			}
+			result -= number;
 			break;
 		case MULTIPLY:
 			result *= number;
