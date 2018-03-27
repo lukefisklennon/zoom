@@ -20,8 +20,11 @@
 #define DIVIDE 4
 
 #define ARGS int argc, ...
-#define START va_list args;va_start(args,argc);for(int i=0;i<argc;i++){Var arg=va_arg(args,Var);
-#define END }va_end(args);
+#define START_ARGS va_list args;va_start(args,argc);
+#define START_LOOP for(int i=0;i<argc;i++){GET_ARG
+#define GET_ARG Var arg=va_arg(args,Var);
+#define END_LOOP }
+#define END_ARGS va_end(args);
 
 typedef unsigned char byte;
 
@@ -130,7 +133,8 @@ Number toNumber(Var *v) {
 
 Number calc(byte operation, ARGS) {
 	Number result;
-	START
+	START_ARGS
+	START_LOOP
 	Number number = toNumber(&arg);
 	if (i == 0) {
 		result = number;
@@ -154,13 +158,15 @@ Number calc(byte operation, ARGS) {
 			break;
 		}
 	}
-	END
+	END_LOOP
+	END_ARGS
 	return result;
 }
 
 String concat(ARGS) {
 	std::stringstream result;
-	START
+	START_ARGS
+	START_LOOP
 	switch (arg.type) {
 	case STRING:
 		result << arg.string;
@@ -172,30 +178,45 @@ String concat(ARGS) {
 		result << arg.boolean;
 		break;
 	}
-	END
+	END_LOOP
+	END_ARGS
 	return result.str();
 }
 
-Var print(ARGS) {
-	START
-	switch (arg.type) {
+void __print(Var *v, bool endLine) {
+	switch (v->type) {
 	case STRING:
-		std::cout << arg.string << std::endl;
+		std::cout << v->string;
 		break;
 	case NUMBER:
-		std::cout << arg.number << std::endl;
+		std::cout << v->number;
 		break;
 	case BOOLEAN:
-		std::cout << arg.boolean << std::endl;
+		std::cout << v->boolean;
 		break;
 	}
-	END
+	if (endLine) {
+		std::cout << std::endl;
+	}
+}
+
+Var print(ARGS) {
+	START_ARGS
+	START_LOOP
+	__print(&arg, true);
+	END_LOOP
+	END_ARGS
 	return Var();
 }
 
 Var input(ARGS) {
-	START
-	END
+	String message;
+	if (argc >= 1) {
+		START_ARGS
+		GET_ARG
+		__print(&arg, false);
+		END_ARGS
+	}
 	String in;
 	std::getline(std::cin, in);
 	return Var(in);
