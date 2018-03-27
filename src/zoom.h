@@ -72,6 +72,23 @@ void assign(Var *v1, Var* v2) {
 	}
 }
 
+void assign(Var *v1, Var v2) {
+	v1->type = v2.type;
+	if (v1->type != UNDEFINED) {
+		switch (v1->type) {
+		case NUMBER:
+			v1->number = v2.number;
+			break;
+		case BOOLEAN:
+			v1->boolean = v2.boolean;
+			break;
+		case STRING:
+			v1->string = v2.string;
+			break;
+		}
+	}
+}
+
 void assign(Var *v, Number n) {
 	v->type = NUMBER;
 	v->number = n;
@@ -92,52 +109,50 @@ void assign(Var *v, const char *s) {
 	v->string = String(s);
 }
 
-// String toString(Var *v) {
-// 	switch (v->type) {
-// 	case STRING:
-// 		return v->string;
-// 		break;
-// 	case NUMBER:
-// 		return std::to_string(v->number);
-// 		break;
-// 	case BOOLEAN:
-// 		if (v->boolean) {
-// 			return "true";
-// 		} else {
-// 			return "false";
-// 		}
-// 		break;
-// 	}
-// 	return "";
-// }
-
-Number calc(byte operation, ARGS) {
-	Number result = 0;
-	if (operation == MULTIPLY || operation == DIVIDE) {
-		result = 1;
-	}
-	START
-	Number number = 0;
-	if (arg.type == NUMBER) {
-		number = arg.number;
-	}
-	switch (operation) {
-	case ADD:
-		result += number;
+Number toNumber(Var *v) {
+	switch (v->type) {
+	case NUMBER:
+		return v->number;
 		break;
-	case SUBTRACT:
-		if (i == 0) {
-			result += number;
+	case BOOLEAN:
+		if (v->boolean) {
+			return 1.0;
 		} else {
-			result -= number;
+			return 0.0;
 		}
 		break;
-	case MULTIPLY:
-		result *= number;
+	case STRING:
+		return std::stod(v->string);
 		break;
-	case DIVIDE:
-		result /= number;
-		break;
+	}
+	return 0.0;
+}
+
+Number calc(byte operation, ARGS) {
+	Number result;
+	START
+	Number number = toNumber(&arg);
+	if (i == 0) {
+		result = number;
+	} else {
+		switch (operation) {
+		case ADD:
+			result += number;
+			break;
+		case SUBTRACT:
+			if (i == 0) {
+				result += number;
+			} else {
+				result -= number;
+			}
+			break;
+		case MULTIPLY:
+			result *= number;
+			break;
+		case DIVIDE:
+			result /= number;
+			break;
+		}
 	}
 	END
 	return result;
@@ -161,7 +176,7 @@ String concat(ARGS) {
 	return result.str();
 }
 
-void print(ARGS) {
+Var print(ARGS) {
 	START
 	switch (arg.type) {
 	case STRING:
@@ -175,4 +190,13 @@ void print(ARGS) {
 		break;
 	}
 	END
+	return Var();
+}
+
+Var input(ARGS) {
+	START
+	END
+	String in;
+	std::getline(std::cin, in);
+	return Var(in);
 }

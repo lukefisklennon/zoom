@@ -1,3 +1,5 @@
-name = "iO Ninja"
-age = 16
-print("My name is " .. name .. " and I'm " .. age .. " years old")
+print("What is your favourite number"?)
+number1 = input()
+print("What is your second favourite number?")
+number2 = input()
+print("Actually, you're favourite numbers are" .. number1 + number2 .. " and " .. number1 * number2)

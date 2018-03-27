@@ -13,7 +13,7 @@ var components = [];
 var lines = [];
 var varId = 0;
 var name = "";
-var nativeFunctions = ["print"];
+var nativeFunctions = ["print", "input"];
 
 global.vars = {};
 global.functions = {};

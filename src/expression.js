@@ -40,12 +40,7 @@ var operators = [
 		number: -1,
 		start: "calc",
 		process: function(symbol, children, location) {
-			for (var i = 0; i < children.length; i++) {
-				if (children[i].type != "VAR") {
-					children[i].string = "Var(" + children[i].string + ")";
-				}
-			}
-			children.unshift(String(children.length));
+			var children = functionOperator.process(symbol, children, location);
 			children.unshift(calcNames[symbol]);
 			return children;
 		}
@@ -132,6 +127,9 @@ class Expression {
 			this.string = this.string.replace("()", "(" + groups[0] + ")");
 			var parts = this.string.split("(");
 			this.children = parts[1].substring(0, parts[1].length - 1).split(",");
+			if (this.children[0].length == 0) {
+				this.children.shift();
+			}
 			this.operator = functionOperator;
 			this.start = parts[0];
 		} else {
