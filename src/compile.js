@@ -2,7 +2,8 @@ var include = require(__dirname + "/include.js");
 
 var fs = require("fs");
 var type = include("type");
-var processExpression = include("expression");
+var renderModule = include("block");
+var renderLine = include("expression");
 var exec = include("exec");
 var Location = include("location");
 var util = include("util");
@@ -20,8 +21,8 @@ global.functions = {};
 
 module.exports = function(n, callback) {
 	name = n;
-    var file = fs.readFileSync(name, "utf8");
-    file = file.trim();
+    var file = fs.readFileSync(name, "utf8").trim();
+	renderModule(file);
     lines = file.split("\n");
 
     for (var i = 0; i < lines.length; i++) {
@@ -45,19 +46,6 @@ module.exports = function(n, callback) {
 	});
 }
 
-function formatLine(s) {
-	var inString = false;
-    for (var i = 0; i < s.length; i++) {
-		if (s[i] == " " && !inString) {
-			s = s.slice(0, i) + s.slice(i + 1);
-			i--;
-		} else if (s[i] == ("\"" || "'")) {
-			inString = !inString;
-		}
-	}
-    return s;
-}
-
 function processLine(string, location) {
-	return processExpression(formatLine(string), location);
+	return renderLine(util.formatLine(string), location);
 }

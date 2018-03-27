@@ -2,6 +2,18 @@ var varId = 0;
 var functionId = 0;
 
 module.exports = {
+	formatLine: function(s) {
+		var inString = false;
+	    for (var i = 0; i < s.length; i++) {
+			if (s[i] == " " && !inString) {
+				s = s.slice(0, i) + s.slice(i + 1);
+				i--;
+			} else if (s[i] == ("\"" || "'")) {
+				inString = !inString;
+			}
+		}
+	    return s;
+	},
 	nameToId: function(name, object) {
 		if (object == global.vars) {
 			if (object[name] == undefined) {

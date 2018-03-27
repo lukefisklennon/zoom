@@ -1,3 +1,3 @@
-a = input("Enter favourite number: ")
-b = input("Enter second favourite number: ")
-print("Actually your favourite numbers are " .. a + b .. " and " .. a * b)
+condition = true
+if condition
+	result = condition
