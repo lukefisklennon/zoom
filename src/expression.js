@@ -3,6 +3,8 @@ var include = require(__dirname + "/include.js");
 var type = include("type");
 var util = include("util");
 
+var nameToId;
+
 var calcNames = {
 	"+": "ADD",
 	"-": "SUBTRACT",
@@ -79,7 +81,7 @@ class Value {
 		this.type = util.typeOf(string);
 		this.location = location;
 		if (this.type == "VAR") {
-			this.string = util.nameToId(this.string, global.vars);
+			this.string = nameToId(this.string, type.var);
 		} else if (this.type == "NUMBER") {
 			this.string = util.floatify(this.string);
 		}
@@ -131,6 +133,7 @@ class Expression {
 				this.children.shift();
 			}
 			this.operator = functionOperator;
+			this.type = this.operator.type;
 			this.start = parts[0];
 		} else {
 			for (var symbol in symbols) {
@@ -138,6 +141,7 @@ class Expression {
 					this.children = this.string.split(symbol);
 					this.symbol = symbol;
 					this.operator = symbols[symbol];
+					this.type = this.operator.type;
 					this.start = this.operator.start;
 					break;
 				}
@@ -155,13 +159,17 @@ class Expression {
 				this.children[i] = new Value(this.children[i], location);
 			}
 		}
-
-		this.type = this.operator.type;
 	}
 }
 
-module.exports = function(string, location) {
-	var parts = [new Expression(string, location)];
+module.exports = function(string, location, nameFunction) {
+	nameToId = nameFunction;
+	var parts = [];
+	if (util.isExpression(string)) {
+		parts.push(new Expression(string, location));
+	} else {
+		parts.push(new Value(string, location));
+	}
 	var foundExpression = true;
 	while (foundExpression) {
 		foundExpression = false;

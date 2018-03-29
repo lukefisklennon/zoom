@@ -1,7 +1,10 @@
+var include = require(__dirname + "/include.js");
+
 var fs = require("fs");
 var childProcess = require("child_process");
-var compile = require(__dirname + "/compile.js");
-var exec = require(__dirname + "/exec.js");
+
+var compile = include("compile");
+var exec = include("exec");
 
 var args = [];
 if (process.argv.length > 2) {

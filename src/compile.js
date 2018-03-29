@@ -3,7 +3,6 @@ var include = require(__dirname + "/include.js");
 var fs = require("fs");
 var type = include("type");
 var renderModule = include("block");
-var renderLine = include("expression");
 var exec = include("exec");
 var Location = include("location");
 var util = include("util");
@@ -22,22 +21,8 @@ global.functions = {};
 module.exports = function(n, callback) {
 	name = n;
     var file = fs.readFileSync(name, "utf8").trim();
-	renderModule(file);
-    lines = file.split("\n");
-
-    for (var i = 0; i < lines.length; i++) {
-        lines[i] = processLine(lines[i], new Location(lines[i], i));
-    }
-
-	components.push(start);
-	if (Object.keys(vars).length > 0) {
-		components.push("Var " + Object.values(vars).join(",") + ";");
-	}
-	components.push(lines.join(";") + ";");
-	components.push(end);
-
-    var output = components.join("");
-	// console.log(output);
+	var output = renderModule(file);
+	console.log(output);
 	var cppName = name.split(".")[0] + ".cpp";
 	var binName = name.split(".")[0] + ".bin";
 	fs.writeFileSync(cppName, output);
@@ -47,5 +32,6 @@ module.exports = function(n, callback) {
 }
 
 function processLine(string, location) {
-	return renderLine(util.formatLine(string), location);
+	// return renderLine(util.formatLine(string), location);
+	return string;
 }

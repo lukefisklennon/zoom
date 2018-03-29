@@ -5,5 +5,6 @@ module.exports = {
 	string: "STRING",
 	object: "OBJECT",
 	array: "ARRAY",
-	var: "VAR"
+	var: "VAR",
+	function: "FUNCTION"
 }

@@ -1,36 +1,4 @@
-var varId = 0;
-var functionId = 0;
-
 module.exports = {
-	formatLine: function(s) {
-		var inString = false;
-	    for (var i = 0; i < s.length; i++) {
-			if (s[i] == " " && !inString) {
-				s = s.slice(0, i) + s.slice(i + 1);
-				i--;
-			} else if (s[i] == ("\"" || "'")) {
-				inString = !inString;
-			}
-		}
-	    return s;
-	},
-	nameToId: function(name, object) {
-		if (object == global.vars) {
-			if (object[name] == undefined) {
-		        object[name] = "v" + varId.toString(16);
-		        varId++;
-		    }
-		} else if (object == global.functions) {
-			if (nativeFunctions.indexOf(name) != -1) {
-				return name;
-			}
-			if (object[name] == undefined) {
-		        object[name] = "f" + functionId.toString(16);
-		        varId++;
-		    }
-		}
-	    return object[name];
-	},
 	isExpression: function(s) {
 		return (this.containsOperator(s) || s.indexOf("(") != -1 || s.indexOf(")") != -1);
 	},

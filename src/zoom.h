@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <string>
 #include <cstdarg>
+#include <cstring>
 #include <iostream>
 #include <sstream>
 
@@ -76,20 +77,7 @@ void assign(Var *v1, Var* v2) {
 }
 
 void assign(Var *v1, Var v2) {
-	v1->type = v2.type;
-	if (v1->type != UNDEFINED) {
-		switch (v1->type) {
-		case NUMBER:
-			v1->number = v2.number;
-			break;
-		case BOOLEAN:
-			v1->boolean = v2.boolean;
-			break;
-		case STRING:
-			v1->string = v2.string;
-			break;
-		}
-	}
+	assign(v1, &v2);
 }
 
 void assign(Var *v, Number n) {
@@ -177,6 +165,32 @@ String concat(ARGS) {
 	END_LOOP
 	END_ARGS
 	return result.str();
+}
+
+bool __if(Var *v) {
+	switch (v->type) {
+	case STRING:
+		return (v->string.length() != 0);
+		break;
+	case NUMBER:
+		return (v->number != 0);
+		break;
+	case BOOLEAN:
+		return v->boolean;
+		break;
+	}
+}
+
+bool __if(Number n) {
+	return (n != 0);
+}
+
+bool __if(Boolean b) {
+	return b;
+}
+
+bool __if(const char *s) {
+	return (strlen(s) != 0);
 }
 
 void __print(Var *v, bool endLine) {
