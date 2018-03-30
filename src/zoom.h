@@ -100,6 +100,37 @@ void assign(Var *v, const char *s) {
 	v->string = String(s);
 }
 
+bool compare(bool inverse, Var *v1, Var *v2) {
+	bool result = v1->type == v2->type;
+	if (result) {
+		switch (v1->type) {
+		case NUMBER:
+			result = v1->number == v2->number;
+			break;
+		case BOOLEAN:
+			result = v1->boolean == v2->boolean;
+			break;
+		case STRING:
+			result = v1->string == v2->string;
+			break;
+		}
+	}
+	if (inverse) result = !result;
+	return result;
+}
+
+bool compare(bool inverse, Var v1, Var v2) {
+	return compare(inverse, &v1, &v2);
+}
+
+bool compare(bool inverse, Var *v1, Var v2) {
+	return compare(inverse, v1, &v2);
+}
+
+bool compare(bool inverse, Var v1, Var *v2) {
+	return compare(inverse, &v1, v2);
+}
+
 Number toNumber(Var *v) {
 	switch (v->type) {
 	case NUMBER:

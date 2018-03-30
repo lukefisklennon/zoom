@@ -1,4 +1,36 @@
 module.exports = {
+	split: function(string, delimiter, ignore) {
+		var parts = [];
+		var next = "";
+		for (var i = 0; i < string.length; i++) {
+			var chop = true;
+			if (string.substring(i, i + delimiter.length) == delimiter) {
+				check:
+				for (var j = 0; j < ignore.length; j++) {
+					if (ignore[j].length > delimiter.length && ignore[j] != delimiter) {
+						var options = [];
+						for (var k = 0; k < ignore[j].length; k++) {
+							var index = i - k;
+							if (string.substring(index, index + ignore[j].length) == ignore[j]) {
+								chop = false;
+								next += string[i];
+								break check;
+							}
+						}
+					}
+				}
+				if (chop) {
+					parts.push(next);
+					next = "";
+			i += delimiter.length - 1;
+				}
+			} else {
+				next += string[i];
+			}
+		}
+		parts.push(next);
+		return parts;
+	},
 	isExpression: function(s) {
 		return (this.containsOperator(s) || s.indexOf("(") != -1 || s.indexOf(")") != -1);
 	},
@@ -40,7 +72,7 @@ module.exports = {
 		return false;
 	},
 	isVar: function(s) {
-		return (!this.isNumber(s) && !this.isBoolean(s) && !this.isString(s) && !this.containsOperator(s) && s.indexOf(".") == -1);
+		return (isNaN(parseFloat(s[0])) && !this.isBoolean(s) && !this.containsOperator(s) && s.indexOf("(") == -1 && s.indexOf(")") && s.indexOf(".") == -1);
 	},
 	floatify: function(s) {
 		if (s.indexOf(".") == -1) {
@@ -51,8 +83,8 @@ module.exports = {
 	warn: function(message, location, patch) {
 		console.log(name + ":" + location.lineNumber);
 		console.log("Warning: " + message);
-		console.log("  " + location.originalLine);
-		console.log("  " + patch);
+		console.log("	" + location.originalLine);
+		console.log("	" + patch);
 		console.log("");
 	}
 };

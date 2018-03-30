@@ -1,2 +1,5 @@
-number = input("Enter a number to square: ")
-print("Result: " .. number * number)
+password = input("Enter password: ")
+if password == "secret"
+	print("Access granted")
+else
+	print("Incorrect password")

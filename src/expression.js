@@ -28,6 +28,22 @@ var operators = [
 		}
 	},
 	{
+		symbols: ["==", "!="],
+		type: type.var,
+		number: -1,
+		start: "compare",
+		process: function(symbol, children, location) {
+			var children = functionOperator.process(symbol, children, location);
+			children.shift();
+			if (symbol == "==") {
+				children.unshift("false");
+			} else if (symbol == "!=") {
+				children.unshift("true");
+			}
+			return children;
+		}
+	},
+	{
 		symbols: [".."],
 		type: type.var,
 		number: -1,
@@ -87,7 +103,7 @@ class Value {
 		}
 	}
 }
-
+var ble = 0;
 class Expression {
 	constructor(string, location) {
 		this.string = string;
@@ -158,8 +174,9 @@ class Expression {
 				this.string = groups[0];
 			}
 			for (var symbol in symbols) {
-				if (this.string.indexOf(symbol) != -1) {
-					this.children = this.string.split(symbol);
+				var parts = util.split(this.string, symbol, Object.keys(symbols));
+				if (parts.length > 1) {
+					this.children = parts;
 					this.symbol = symbol;
 					this.operator = symbols[symbol];
 					this.type = this.operator.type;

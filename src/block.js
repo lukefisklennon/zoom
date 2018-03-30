@@ -19,6 +19,9 @@ var keywords = {
 		string += block.first + ")){";
 		return string;
 	},
+	else: function(block) {
+		return "else{";
+	},
 	while: function(block) {
 
 	},
@@ -50,8 +53,9 @@ class Block {
 		for (var i = 0; i < this.lines.length; i++) {
 			var blockFound = false;
 			for (var keyword in keywords) {
-				if (this.lines[i].indexOf(keyword + " ") == 0) {
-					var first = renderLine(this.lines[i].substring(keyword.length + 1, this.lines[i].length), new Location("todo", 1), (this.nameToId).bind(this));
+				var line = this.lines[i].trim();
+				if (line == keyword || line.indexOf(keyword + " ") == 0) {
+					var first = renderLine(line.substring(keyword.length + 1, this.lines[i].length), new Location(line, 1), (this.nameToId).bind(this));
 					var lines = [];
 					var blockIndent = indentOf(this.lines[i + 1]);
 					for (var j = i + 1; j < this.lines.length; j++) {
