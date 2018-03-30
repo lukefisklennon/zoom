@@ -29,7 +29,7 @@ var operators = [
 	},
 	{
 		symbols: [".."],
-		type: type.string,
+		type: type.var,
 		number: -1,
 		start: "concat",
 		process: function(symbol, children, location) {
@@ -38,7 +38,7 @@ var operators = [
 	},
 	{
 		symbols: ["+", "-", "*", "/"],
-		type: type.number,
+		type: type.var,
 		number: -1,
 		start: "calc",
 		process: function(symbol, children, location) {
@@ -95,37 +95,55 @@ class Expression {
 		this.location = location;
 		this.start = "";
 		this.end = ")";
-		var level = 0;
-		var start = -1;
+
 		var groups = [];
+		var strings = [];
 		var hasOperator = false;
 
-		if (this.string[0] == "(" && this.string[this.string.length - 1] == ")") {
-			this.string = this.string.substring(1, this.string.length - 1);
-		}
+		var level = 0;
+		var groupStart = -1;
+		var inString = false;
+		var stringStart = -1;
+		var stringChar;
 
 		for (var i = 0; i < this.string.length; i++) {
-			if (level == 0 && this.string[i] in symbols) {
+			if (level == 0 && !inString && this.string[i] in symbols) {
 				hasOperator = true;
 			} else if (this.string[i] == "(") {
 				level++;
 				if (level == 1) {
-					start = i;
+					groupStart = i;
 				}
 			} else if (this.string[i] == ")") {
 				level--;
 				if (level == 0) {
-					var group = this.string.substring(start + 1, i);
+					var group = this.string.substring(groupStart + 1, i);
 					groups.push(group);
 					this.string = this.string.replace(group, "");
 					i -= group.length;
 				}
+			} else if (this.string[i] == ("\"" || "'")) {
+				if (stringChar) {
+					if (inString && this.string[i] == stringChar) {
+						inString = false;
+						var string = this.string.substring(stringStart + 1, i);
+						strings.push(string)
+						this.string = this.string.replace(string, "");
+						i -= string.length;
+					} else {
+						inString = true;
+						stringStart = i;
+						stringChar = this.string[i];
+					}
+				} else {
+					inString = true;
+					stringStart = i;
+					stringChar = this.string[i];
+				}
 			}
 		}
 
-		if (this.string == "()") {
-			this.string = groups[0];
-		} else if (groups.length > 0 && !hasOperator) {
+		if (groups.length > 0 && !hasOperator && this.string != "()") {
 			this.string = this.string.replace("()", "(" + groups[0] + ")");
 			var parts = this.string.split("(");
 			this.children = parts[1].substring(0, parts[1].length - 1).split(",");
@@ -136,6 +154,9 @@ class Expression {
 			this.type = this.operator.type;
 			this.start = parts[0];
 		} else {
+			if (this.string == "()") {
+				this.string = groups[0];
+			}
 			for (var symbol in symbols) {
 				if (this.string.indexOf(symbol) != -1) {
 					this.children = this.string.split(symbol);
@@ -149,9 +170,15 @@ class Expression {
 		}
 
 		for (var i = 0; i < this.children.length; i++) {
-			if (this.children[i].indexOf("()") != -1) {
+			var n = (this.children[i].match(/\(\)/g) || []).length;
+			for (var j = 0; j < n; j++) {
 				this.children[i] = this.children[i].replace("()", "(" + groups[0] + ")");
 				groups.shift();
+			}
+			var n = (this.children[i].match(/""/g) || []).length;
+			for (var j = 0; j < n; j++) {
+				this.children[i] = this.children[i].replace("\"\"", "\"" + strings[0] + "\"");
+				strings.shift();
 			}
 			if (util.isExpression(this.children[i])) {
 				this.children[i] = new Expression(this.children[i], location);
@@ -170,6 +197,7 @@ module.exports = function(string, location, nameFunction) {
 	} else {
 		parts.push(new Value(string, location));
 	}
+
 	var foundExpression = true;
 	while (foundExpression) {
 		foundExpression = false;

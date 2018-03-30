@@ -119,7 +119,7 @@ Number toNumber(Var *v) {
 	return 0.0;
 }
 
-Number calc(byte operation, ARGS) {
+Var calc(byte operation, ARGS) {
 	Number result;
 	START_ARGS
 	START_LOOP
@@ -144,10 +144,10 @@ Number calc(byte operation, ARGS) {
 	}
 	END_LOOP
 	END_ARGS
-	return result;
+	return Var(result);
 }
 
-String concat(ARGS) {
+Var concat(ARGS) {
 	std::stringstream result;
 	START_ARGS
 	START_LOOP
@@ -164,10 +164,10 @@ String concat(ARGS) {
 	}
 	END_LOOP
 	END_ARGS
-	return result.str();
+	return Var(result.str());
 }
 
-bool __if(Var *v) {
+bool toBoolean(Var *v) {
 	switch (v->type) {
 	case STRING:
 		return (v->string.length() != 0);
@@ -181,15 +181,15 @@ bool __if(Var *v) {
 	}
 }
 
-bool __if(Number n) {
+bool toBoolean(Number n) {
 	return (n != 0);
 }
 
-bool __if(Boolean b) {
+bool toBoolean(Boolean b) {
 	return b;
 }
 
-bool __if(const char *s) {
+bool toBoolean(const char *s) {
 	return (strlen(s) != 0);
 }
 

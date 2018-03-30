@@ -12,7 +12,7 @@ var keywords = {
 		return mainStart;
 	},
 	if: function(block) {
-		var string = "if(__if(";
+		var string = "if(toBoolean(";
 		if (util.isVar(block.first)) {
 			string += "&";
 		}
@@ -31,18 +31,22 @@ var keywords = {
 }
 
 class Block {
-	constructor(lines, keyword, first) {
+	constructor(lines, keyword, parent, first) {
 		this.lines = lines;
 		this.indent = indentOf(lines[0]);
 		this.children = [];
 		this.keyword = keyword;
-		this.names = {};
-		this.names[type.var] = [];
-		this.names[type.function] = [];
+		this.hasScope = false;
+		this.parent = parent;
 		if (first !== undefined) {
 			this.first = first;
 		}
-
+		if (keyword == ("main" || "function")) {
+			this.hasScope = true;
+			this.names = {};
+			this.names[type.var] = [];
+			this.names[type.function] = [];
+		}
 		for (var i = 0; i < this.lines.length; i++) {
 			var blockFound = false;
 			for (var keyword in keywords) {
@@ -57,7 +61,13 @@ class Block {
 							break;
 						}
 					}
-					this.children[i] = new Block(lines, keyword, first);
+					var parent;
+					if (this.hasScope) {
+						parent = this;
+					} else {
+						parent = this.parent;
+					}
+					this.children[i] = new Block(lines, keyword, parent, first);
 					blockFound = true;
 					i = j - 1;
 				}
@@ -69,13 +79,24 @@ class Block {
 	}
 
 	nameToId(nameString, nameType) {
+		var block;
+		if (this.hasScope) {
+			block = this;
+		} else {
+			block = this.parent;
+		}
 		var prefix;
 		if (nameType == type.var) {
 			prefix = "v";
 		} else if (nameType == type.function) {
 			prefix = "f";
 		}
-		
+		var index = block.names[nameType].indexOf(nameString);
+		if (index == -1) {
+			block.names[nameType].push(nameString);
+			index = block.names[nameType].length - 1;
+		}
+		return prefix + index.toString(16);
 	}
 
 	unduplicateScope() {
@@ -121,14 +142,15 @@ module.exports = function(string) {
 			smallestIndent = maxSpaces;
 		}
 	}
+	if (smallestIndent == -1) smallestIndent = 0;
 	var indent = " ".repeat(smallestIndent);
 	for (var i = 0; i < lines.length; i++) {
 		lines[i] = lines[i].replace(indent, "\t");
 	}
 
-	var parts = [new Block(lines, "main")];
+	var parts = [new Block(lines, "main", null)];
 	// console.log(JSON.stringify(parts, null, 2));
-	parts[0].unduplicateScope();
+	// parts[0].unduplicateScope();
 
 	var foundBlock = true;
 	while (foundBlock) {
@@ -137,12 +159,14 @@ module.exports = function(string) {
 			if (parts[i] instanceof Block) {
 				var a = [];
 				a.push(keywords[parts[i].keyword](parts[i]));
-				var names = [];
-				for (var j = 0; j < parts[i].names[type.var].length; j++) {
-					names.push("v" + j.toString(16));
-				}
-				if (Object.keys(names).length > 0) {
-					a.push("Var " + Object.values(names).join(",") + ";");
+				if (parts[i].hasScope) {
+					var names = [];
+					for (var j = 0; j < parts[i].names[type.var].length; j++) {
+						names.push("v" + j.toString(16));
+					}
+					if (Object.keys(names).length > 0) {
+						a.push("Var " + Object.values(names).join(",") + ";");
+					}
 				}
 				var children = parts[i].children;
 				for (var j = 0; j < children.length; j++) {
@@ -194,11 +218,12 @@ function formatLine(s) {
 					inString = false;
 				} else {
 					inString = true;
+					stringStart = s[i];
 				}
 			} else {
 				inString = true;
+				stringStart = s[i];
 			}
-			inString = !inString;
 		}
 	}
 	return s;

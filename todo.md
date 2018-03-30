@@ -1,4 +1,3 @@
-- [ ] Ignore characters within quotes
 - [ ] Single- and multi-line comments
 - [ ] Block trees
 - [ ] If statements, for loops and while loops

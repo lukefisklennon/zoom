@@ -1,2 +1,2 @@
 #include "zoom.h"
-int main(int argc,char *argv[]){Var v0;assign(&v0,1.0);if(__if(&v0)){print(1,Var("Nonzero"));}}
+int main(int argc,char *argv[]){Var v0,v1;assign(&v0,input(1,Var("Enter a number to square: ")));v1;print(1,Var("That is a valid number"));print(1,concat(2,Var("Result: "),calc(MULTIPLY,2,v0,v0)));}
