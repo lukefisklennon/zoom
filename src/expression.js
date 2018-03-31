@@ -44,6 +44,66 @@ var operators = [
 		}
 	},
 	{
+		symbols: ["==", "!="],
+		type: type.var,
+		number: -1,
+		start: "compare",
+		process: function(symbol, children, location) {
+			var children = functionOperator.process(symbol, children, location);
+			children.shift();
+			if (symbol == "==") {
+				children.unshift("false");
+			} else if (symbol == "!=") {
+				children.unshift("true");
+			}
+			return children;
+		}
+	},
+	{
+		symbols: [">"],
+		type: type.var,
+		number: -1,
+		start: "gt",
+		process: function(symbol, children, location) {
+			var children = functionOperator.process(symbol, children, location);
+			children.shift();
+			return children;
+		}
+	},
+	{
+		symbols: ["<"],
+		type: type.var,
+		number: -1,
+		start: "lt",
+		process: function(symbol, children, location) {
+			var children = functionOperator.process(symbol, children, location);
+			children.shift();
+			return children;
+		}
+	},
+	{
+		symbols: [">="],
+		type: type.var,
+		number: -1,
+		start: "gte",
+		process: function(symbol, children, location) {
+			var children = functionOperator.process(symbol, children, location);
+			children.shift();
+			return children;
+		}
+	},
+	{
+		symbols: ["<="],
+		type: type.var,
+		number: -1,
+		start: "lte",
+		process: function(symbol, children, location) {
+			var children = functionOperator.process(symbol, children, location);
+			children.shift();
+			return children;
+		}
+	},
+	{
 		symbols: [".."],
 		type: type.var,
 		number: -1,
@@ -103,7 +163,7 @@ class Value {
 		}
 	}
 }
-var ble = 0;
+
 class Expression {
 	constructor(string, location) {
 		this.string = string;
@@ -135,7 +195,7 @@ class Expression {
 				if (level == 0) {
 					var group = this.string.substring(groupStart + 1, i);
 					groups.push(group);
-					this.string = this.string.replace(group, "");
+					this.string = this.string.substring(0, groupStart + 1) + this.string.substring(groupStart + 2, this.string.length);
 					i -= group.length;
 				}
 			} else if (this.string[i] == ("\"" || "'")) {
@@ -240,5 +300,6 @@ module.exports = function(string, location, nameFunction) {
 			parts[i] = parts[i].string;
 		}
 	}
+
     return parts.join("");
 }

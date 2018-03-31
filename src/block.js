@@ -23,7 +23,12 @@ var keywords = {
 		return "else{";
 	},
 	while: function(block) {
-
+		var string = "while(toBoolean(";
+		if (util.isVar(block.first)) {
+			string += "&";
+		}
+		string += block.first + ")){";
+		return string;
 	},
 	for: function(block) {
 
@@ -136,25 +141,20 @@ module.exports = function(string) {
 			if (lines[i][j] == " ") {
 				spacesInRow++;
 			} else {
-				if (spacesInRow > maxSpaces) {
-					maxSpaces = spacesInRow;
-				}
-				spacesInRow = 0;
+				break;
 			}
 		}
 		if (maxSpaces >= 2 && (smallestIndent == -1 || maxSpaces < smallestIndent)) {
 			smallestIndent = maxSpaces;
 		}
 	}
-	if (smallestIndent == -1) smallestIndent = 0;
-	var indent = " ".repeat(smallestIndent);
-	for (var i = 0; i < lines.length; i++) {
-		lines[i] = lines[i].replace(indent, "\t");
+	if (smallestIndent != -1) {
+		var indent = " ".repeat(smallestIndent);
+		for (var i = 0; i < lines.length; i++) {
+			lines[i] = lines[i].replace(indent, "\t");
+		}
 	}
-
 	var parts = [new Block(lines, "main", null)];
-	// console.log(JSON.stringify(parts, null, 2));
-	// parts[0].unduplicateScope();
 
 	var foundBlock = true;
 	while (foundBlock) {
