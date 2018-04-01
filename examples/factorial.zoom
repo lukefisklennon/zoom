@@ -5,9 +5,9 @@ equation = ""
 i = 1
 while i < number + 1
 	total = total + i
-	equation ..= i
+	equation = equation .. i
 	if i .. "" != number
-		equation ..= " + "
-	i += 1
+		equation = equation .. " + "
+	i = i + 1
 
 print(equation .. " = " .. total)

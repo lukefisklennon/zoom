@@ -18,89 +18,54 @@ var operators = [
 		type: type.var,
 		number: 2,
 		start: "assign",
-		process: function(symbol, children, location) {
-			for (var i = 0; i < children.length; i++) {
-				if (children[i] instanceof Value && children[i].type == "VAR") {
-					children[i].string = "&" + children[i].string;
-				}
-			}
-			return children;
+		process: function(expression) {
+			addressify(expression);
 		}
 	},
 	{
 		symbols: ["==", "!="],
-		type: type.var,
-		number: -1,
+		type: type.boolean,
+		number: 2,
 		start: "compare",
-		process: function(symbol, children, location) {
-			var children = functionOperator.process(symbol, children, location);
-			children.shift();
-			if (symbol == "==") {
-				children.unshift("false");
-			} else if (symbol == "!=") {
-				children.unshift("true");
-			}
-			return children;
+		process: function(expression) {
+			comparison(expression, this.symbols);
 		}
 	},
 	{
-		symbols: ["==", "!="],
-		type: type.var,
-		number: -1,
-		start: "compare",
-		process: function(symbol, children, location) {
-			var children = functionOperator.process(symbol, children, location);
-			children.shift();
-			if (symbol == "==") {
-				children.unshift("false");
-			} else if (symbol == "!=") {
-				children.unshift("true");
-			}
-			return children;
-		}
-	},
-	{
-		symbols: [">"],
-		type: type.var,
-		number: -1,
+		symbols: [">", "<="],
+		type: type.boolean,
+		number: 2,
 		start: "gt",
-		process: function(symbol, children, location) {
-			var children = functionOperator.process(symbol, children, location);
-			children.shift();
-			return children;
+		process: function(expression) {
+			comparison(expression, this.symbols);
 		}
 	},
 	{
-		symbols: ["<"],
-		type: type.var,
-		number: -1,
+		symbols: ["<", ">="],
+		type: type.boolean,
+		number: 2,
 		start: "lt",
-		process: function(symbol, children, location) {
-			var children = functionOperator.process(symbol, children, location);
-			children.shift();
-			return children;
+		process: function(expression) {
+			comparison(expression, this.symbols);
 		}
 	},
 	{
-		symbols: [">="],
+		symbols: ["+=", "-=", "*=", "/="],
 		type: type.var,
-		number: -1,
-		start: "gte",
-		process: function(symbol, children, location) {
-			var children = functionOperator.process(symbol, children, location);
-			children.shift();
-			return children;
+		number: 2,
+		start: "mcalc",
+		process: function(expression) {
+			modifier(expression);
+			expression.children.unshift(calcNames[expression.symbol[0]]);
 		}
 	},
 	{
-		symbols: ["<="],
+		symbols: ["..="],
 		type: type.var,
-		number: -1,
-		start: "lte",
-		process: function(symbol, children, location) {
-			var children = functionOperator.process(symbol, children, location);
-			children.shift();
-			return children;
+		number: 2,
+		start: "mconcat",
+		process: function(expression) {
+			modifier(expression);
 		}
 	},
 	{
@@ -108,8 +73,8 @@ var operators = [
 		type: type.var,
 		number: -1,
 		start: "concat",
-		process: function(symbol, children, location) {
-			return functionOperator.process(symbol, children, location);
+		process: function(expression) {
+			functionOperator.process(expression);
 		}
 	},
 	{
@@ -117,10 +82,9 @@ var operators = [
 		type: type.var,
 		number: -1,
 		start: "calc",
-		process: function(symbol, children, location) {
-			var children = functionOperator.process(symbol, children, location);
-			children.unshift(calcNames[symbol]);
-			return children;
+		process: function(expression) {
+			functionOperator.process(expression);
+			expression.children.unshift(calcNames[expression.symbol]);
 		}
 	}
 ];
@@ -128,20 +92,46 @@ var operators = [
 var functionOperator = {
 	type: type.var,
 	number: -1,
-	process: function(symbol, children, location) {
-		for (var i = 0; i < children.length; i++) {
-			if (children[i].type != "VAR") {
-				if (children[i] instanceof Expression) {
-					children[i].start = "Var(" + children[i].start;
-					children[i].end += ")";
-				} else if (children[i] instanceof Value) {
-					children[i].string = "Var(" + children[i].string + ")";
-				}
+	process: function(expression) {
+		varify(expression);
+		expression.children.unshift(String(expression.children.length));
+	}
+}
+
+function varify(expression) {
+	for (var i = 0; i < expression.children.length; i++) {
+		if (expression.children[i].type != "VAR") {
+			if (expression.children[i] instanceof Expression) {
+				expression.children[i].start = "Var(" + expression.children[i].start;
+				expression.children[i].end += ")";
+			} else if (expression.children[i] instanceof Value) {
+				expression.children[i].string = "Var(" + expression.children[i].string + ")";
 			}
 		}
-		children.unshift(String(children.length));
-		return children;
 	}
+}
+
+function addressify(expression) {
+	for (var i = 0; i < expression.children.length; i++) {
+		if (expression.children[i] instanceof Value && expression.children[i].type == "VAR") {
+			expression.children[i].string = "&" + expression.children[i].string;
+		}
+	}
+}
+
+function comparison(expression, symbols) {
+	varify(expression);
+	addressify(expression);
+	if (expression.symbol == symbols[0]) {
+		expression.children.unshift("false");
+	} else if (expression.symbol == symbols[1]) {
+		expression.children.unshift("true");
+	}
+}
+
+function modifier(expression) {
+	varify(expression);
+	addressify(expression);
 }
 
 global.symbols = {};
@@ -279,17 +269,18 @@ module.exports = function(string, location, nameFunction) {
 	while (foundExpression) {
 		foundExpression = false;
 		for (var i = 0; i < parts.length; i++) {
-			if (parts[i] instanceof Expression) {
-				var a = [parts[i].start + "("];
+			var expression = parts[i];
+			if (expression instanceof Expression) {
+				var a = [expression.start + "("];
 				// console.log(parts[i]);
-				var children = parts[i].operator.process(parts[i].symbol, parts[i].children, parts[i].location);
-				for (var j = 0; j < children.length; j++) {
-					a.push(children[j]);
-					if (j < children.length - 1) {
+				expression.operator.process(parts[i]);
+				for (var j = 0; j < expression.children.length; j++) {
+					a.push(expression.children[j]);
+					if (j < expression.children.length - 1) {
 						a.push(",");
 					}
 				}
-				a.push(parts[i].end);
+				a.push(expression.end);
 				parts.splice(i, 1);
 				parts.splice(i, 0, ...a);
 				foundExpression = true;

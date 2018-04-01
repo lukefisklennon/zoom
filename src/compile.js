@@ -26,7 +26,7 @@ module.exports = function(n, callback) {
 	var cppName = name.split(".")[0] + ".cpp";
 	var binName = name.split(".")[0] + ".bin";
 	fs.writeFileSync(cppName, output);
-	exec("g++ -std=c++11 " + cppName + " -o " + binName, function() {
+	exec("g++ -std=c++11 -g " + cppName + " -o " + binName, function() {
 		if (callback) callback();
 	});
 }

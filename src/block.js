@@ -78,9 +78,11 @@ class Block {
 						}
 						this.children[i] = new Block(lines, keyword, parent, first);
 						blockFound = true;
-						i = j - 1;
 					}
-					if (!blockFound) {
+
+					if (blockFound) {
+						i = j - 1;
+					} else {
 						this.children[i] = renderLine(this.lines[i].trim(), new Location(this.lines[i], 1), (this.nameToId).bind(this));
 					}
 				}

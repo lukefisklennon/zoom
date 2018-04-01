@@ -131,7 +131,7 @@ bool compare(bool inverse, Var v1, Var *v2) {
 	return compare(inverse, &v1, v2);
 }
 
-bool gt(Var *v1, Var *v2) {
+bool gt(bool inverse, Var *v1, Var *v2) {
 	bool result = v1->type == v2->type;
 	if (result) {
 		switch (v1->type) {
@@ -143,22 +143,23 @@ bool gt(Var *v1, Var *v2) {
 			break;
 		}
 	}
+	if (inverse) result = !result;
 	return result;
 }
 
-bool gt(Var v1, Var v2) {
-	return gt(&v1, &v2);
+bool gt(bool inverse, Var v1, Var v2) {
+	return gt(inverse, &v1, &v2);
 }
 
-bool gt(Var *v1, Var v2) {
-	return gt(v1, &v2);
+bool gt(bool inverse, Var *v1, Var v2) {
+	return gt(inverse, v1, &v2);
 }
 
-bool gt(Var v1, Var *v2) {
-	return gt(&v1, v2);
+bool gt(bool inverse, Var v1, Var *v2) {
+	return gt(inverse, &v1, v2);
 }
 
-bool lt(Var *v1, Var *v2) {
+bool lt(bool inverse, Var *v1, Var *v2) {
 	bool result = v1->type == v2->type;
 	if (result) {
 		switch (v1->type) {
@@ -170,73 +171,20 @@ bool lt(Var *v1, Var *v2) {
 			break;
 		}
 	}
+	if (inverse) result = !result;
 	return result;
 }
 
-bool lt(Var v1, Var v2) {
-	return lt(&v1, &v2);
+bool lt(bool inverse, Var v1, Var v2) {
+	return lt(inverse, &v1, &v2);
 }
 
-bool lt(Var *v1, Var v2) {
-	return lt(v1, &v2);
+bool lt(bool inverse, Var *v1, Var v2) {
+	return lt(inverse, v1, &v2);
 }
 
-bool lt(Var v1, Var *v2) {
-	return lt(&v1, v2);
-}
-
-bool gte(Var *v1, Var *v2) {
-	bool result = v1->type == v2->type;
-	if (result) {
-		switch (v1->type) {
-		case NUMBER:
-			result = v1->number >= v2->number;
-			break;
-		case BOOLEAN:
-			result = v1->boolean >= v2->boolean;
-			break;
-		}
-	}
-	return result;
-}
-
-bool gte(Var v1, Var v2) {
-	return gte(&v1, &v2);
-}
-
-bool gte(Var *v1, Var v2) {
-	return gte(v1, &v2);
-}
-
-bool gte(Var v1, Var *v2) {
-	return gte(&v1, v2);
-}
-
-bool lte(Var *v1, Var *v2) {
-	bool result = v1->type == v2->type;
-	if (result) {
-		switch (v1->type) {
-		case NUMBER:
-			result = v1->number <= v2->number;
-			break;
-		case BOOLEAN:
-			result = v1->boolean <= v2->boolean;
-			break;
-		}
-	}
-	return result;
-}
-
-bool lte(Var v1, Var v2) {
-	return lte(&v1, &v2);
-}
-
-bool lte(Var *v1, Var v2) {
-	return lte(v1, &v2);
-}
-
-bool lte(Var v1, Var *v2) {
-	return lte(&v1, v2);
+bool lt(bool inverse, Var v1, Var *v2) {
+	return lt(inverse, &v1, v2);
 }
 
 Number toNumber(Var *v) {
@@ -286,6 +234,26 @@ Var calc(byte operation, ARGS) {
 	return Var(result);
 }
 
+Var mcalc(byte operation, Var *v1, Var *v2) {
+	assign(v1, calc(operation, 2, *v1, *v2));
+	return *v1;
+}
+
+Var mcalc(byte operation, Var v1, Var v2) {
+	assign(&v1, calc(operation, 2, v1, v2));
+	return v1;
+}
+
+Var mcalc(byte operation, Var *v1, Var v2) {
+	assign(v1, calc(operation, 2, *v1, v2));
+	return *v1;
+}
+
+Var mcalc(byte operation, Var v1, Var *v2) {
+	assign(&v1, calc(operation, 2, v1, *v2));
+	return v1;
+}
+
 Var concat(ARGS) {
 	std::stringstream result;
 	START_ARGS
@@ -304,6 +272,26 @@ Var concat(ARGS) {
 	END_LOOP
 	END_ARGS
 	return Var(result.str());
+}
+
+Var mconcat(Var *v1, Var *v2) {
+	assign(v1, concat(2, *v1, *v2));
+	return *v1;
+}
+
+Var mconcat(Var v1, Var v2) {
+	assign(&v1, concat(2, v1, v2));
+	return v1;
+}
+
+Var mconcat(Var *v1, Var v2) {
+	assign(v1, concat(2, *v1, v2));
+	return *v1;
+}
+
+Var mconcat(Var v1, Var *v2) {
+	assign(&v1, concat(2, v1, *v2));
+	return v1;
 }
 
 bool toBoolean(Var *v) {

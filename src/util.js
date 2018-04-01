@@ -72,7 +72,7 @@ module.exports = {
 		return false;
 	},
 	isVar: function(s) {
-		return (isNaN(parseFloat(s[0])) && !this.isBoolean(s) && !this.containsOperator(s) && s.indexOf("(") == -1 && s.indexOf(")") && s.indexOf(".") == -1);
+		return (isNaN(parseFloat(s[0])) && !this.isBoolean(s) && !this.containsOperator(s) && s.indexOf("(") == -1 && s.indexOf(")") && s.indexOf(".") == -1 && s.indexOf (" ") == -1);
 	},
 	floatify: function(s) {
 		if (s.indexOf(".") == -1) {
