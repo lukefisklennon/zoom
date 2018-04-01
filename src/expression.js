@@ -195,7 +195,7 @@ class Expression {
 				if (level == 0) {
 					var group = this.string.substring(groupStart + 1, i);
 					groups.push(group);
-					this.string = this.string.substring(0, groupStart + 1) + this.string.substring(groupStart + 2, this.string.length);
+					this.string = this.string.substring(0, groupStart + 1) + this.string.substring(groupStart + group.length + 1, this.string.length);
 					i -= group.length;
 				}
 			} else if (this.string[i] == ("\"" || "'")) {
@@ -281,6 +281,7 @@ module.exports = function(string, location, nameFunction) {
 		for (var i = 0; i < parts.length; i++) {
 			if (parts[i] instanceof Expression) {
 				var a = [parts[i].start + "("];
+				// console.log(parts[i]);
 				var children = parts[i].operator.process(parts[i].symbol, parts[i].children, parts[i].location);
 				for (var j = 0; j < children.length; j++) {
 					a.push(children[j]);

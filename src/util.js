@@ -32,7 +32,7 @@ module.exports = {
 		return parts;
 	},
 	isExpression: function(s) {
-		return (this.containsOperator(s) || s.indexOf("(") != -1 || s.indexOf(")") != -1);
+		return (this.typeOf(s) == null && (this.containsOperator(s) || s.indexOf("(") != -1 || s.indexOf(")") != -1));
 	},
 	typeOf: function(s) {
 		if (this.isNumber(s)) {

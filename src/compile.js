@@ -22,7 +22,7 @@ module.exports = function(n, callback) {
 	name = n;
     var file = fs.readFileSync(name, "utf8").trim();
 	var output = renderModule(file);
-	console.log(output);
+	// console.log(output);
 	var cppName = name.split(".")[0] + ".cpp";
 	var binName = name.split(".")[0] + ".bin";
 	fs.writeFileSync(cppName, output);

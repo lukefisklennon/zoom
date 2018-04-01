@@ -59,30 +59,31 @@ class Block {
 			var blockFound = false;
 			for (var keyword in keywords) {
 				var line = this.lines[i].trim();
-				if (line == keyword || line.indexOf(keyword + " ") == 0) {
-					var first = renderLine(line.substring(keyword.length + 1, this.lines[i].length), new Location(line, 1), (this.nameToId).bind(this));
-					var lines = [];
-					var blockIndent = indentOf(this.lines[i + 1]);
-					for (var j = i + 1; j < this.lines.length; j++) {
-						if (indentOf(this.lines[j]) >= blockIndent) {
-							lines.push(this.lines[j]);
-						} else {
-							break;
+				if (line.length > 0 && line[0] != "~") {
+					if (line == keyword || line.indexOf(keyword + " ") == 0) {
+						var first = renderLine(line.substring(keyword.length + 1, this.lines[i].length), new Location(line, 1), (this.nameToId).bind(this));
+						var lines = [];
+						for (var j = i + 1; j < this.lines.length; j++) {
+							if (indentOf(this.lines[j]) > this.indent) {
+								lines.push(this.lines[j]);
+							} else {
+								break;
+							}
 						}
+						var parent;
+						if (this.hasScope) {
+							parent = this;
+						} else {
+							parent = this.parent;
+						}
+						this.children[i] = new Block(lines, keyword, parent, first);
+						blockFound = true;
+						i = j - 1;
 					}
-					var parent;
-					if (this.hasScope) {
-						parent = this;
-					} else {
-						parent = this.parent;
+					if (!blockFound) {
+						this.children[i] = renderLine(this.lines[i].trim(), new Location(this.lines[i], 1), (this.nameToId).bind(this));
 					}
-					this.children[i] = new Block(lines, keyword, parent, first);
-					blockFound = true;
-					i = j - 1;
 				}
-			}
-			if (!blockFound) {
-				this.children[i] = renderLine(this.lines[i].trim(), new Location(this.lines[i], 1), (this.nameToId).bind(this));
 			}
 		}
 	}
