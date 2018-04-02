@@ -1,13 +1,6 @@
-number = input("Enter a number: ")
-total = 0
-equation = ""
+name = input("Enter name: ")
 
-i = 1
-while i < number + 1
-	total = total + i
-	equation ..= i
-	if i .. "" != number
-		equation ..= " + "
-	i += 1
+hello(name)
 
-print(equation .. " = " .. total)
+function hello(name)
+	print("Hello " .. name)

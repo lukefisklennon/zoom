@@ -33,11 +33,30 @@ typedef double Number;
 typedef bool Boolean;
 typedef std::string String;
 
+struct Var;
+void assign(Var *, Var*);
+
 struct Var {
 	byte type;
 	Number number;
 	Boolean boolean;
 	String string;
+	Var(const Var &v) {
+		this->type = v.type;
+		if (this->type != UNDEFINED) {
+			switch (this->type) {
+			case NUMBER:
+				this->number = v.number;
+				break;
+			case BOOLEAN:
+				this->boolean = v.boolean;
+				break;
+			case STRING:
+				this->string = v.string;
+				break;
+			}
+		}
+	}
 	Var() {
 		type = UNDEFINED;
 	}
@@ -320,7 +339,7 @@ bool toBoolean(const char *s) {
 	return (strlen(s) != 0);
 }
 
-void __print(Var *v, bool endLine) {
+void print(Var *v, bool endLine) {
 	switch (v->type) {
 	case STRING:
 		std::cout << v->string;
@@ -337,22 +356,14 @@ void __print(Var *v, bool endLine) {
 	}
 }
 
-Var print(ARGS) {
-	START_ARGS
-	START_LOOP
-	__print(&arg, true);
-	END_LOOP
-	END_ARGS
+Var print(Var var) {
+	print(&var, true);
 	return Var();
 }
 
-Var input(ARGS) {
-	String message;
-	if (argc >= 1) {
-		START_ARGS
-		GET_ARG
-		__print(&arg, false);
-		END_ARGS
+Var input(Var var) {
+	if (var.type != UNDEFINED) {
+		print(&var, false);
 	}
 	String in;
 	std::getline(std::cin, in);

@@ -5,36 +5,62 @@ var util = include("util");
 var type = include("type");
 var Location = include("location");
 
-var mainStart = "#include \"zoom.h\"\nint main(int argc,char *argv[]){";
+var headers = "#include \"zoom.h\"\n";
+var start = "int main(int argc,char *argv[]){";
+var end = "return 0;";
+
+class Function {
+	constructor(variadic, argc) {
+		this.variadic = variadic;
+		if (!this.variadic) {
+			this.argc = argc;
+		}
+	}
+}
+
+var nativeFunctions = ["print", "input"];
+var functions = {
+	"print": new Function(false, 1),
+	"input": new Function(false, 1)
+};
 
 var keywords = {
-	main: function(block) {
-		return mainStart;
+	main: {
+		start: function(block) {
+			return start;
+		},
+		end: end
 	},
-	if: function(block) {
-		var string = "if(toBoolean(";
-		if (util.isVar(block.first)) {
-			string += "&";
+	if: {
+		start: function(block) {
+			var string = "if(toBoolean(";
+			if (util.isVar(block.first)) {
+				string += "&";
+			}
+			string += block.first + ")){";
+			return string;
 		}
-		string += block.first + ")){";
-		return string;
 	},
-	else: function(block) {
-		return "else{";
-	},
-	while: function(block) {
-		var string = "while(toBoolean(";
-		if (util.isVar(block.first)) {
-			string += "&";
+	else: {
+		start: function(block) {
+			return "else{";
 		}
-		string += block.first + ")){";
-		return string;
 	},
-	for: function(block) {
-
+	while: {
+		start: function(block) {
+			var string = "while(toBoolean(";
+			if (util.isVar(block.first)) {
+				string += "&";
+			}
+			string += block.first + ")){";
+			return string;
+		}
 	},
-	function: function(block) {
-
+	function: {
+		start: function(block) {
+			return "Var " + block.first + "{";
+		},
+		end: "return Var();"
 	}
 }
 
@@ -51,17 +77,20 @@ class Block {
 		}
 		if (keyword == ("main" || "function")) {
 			this.hasScope = true;
-			this.names = {};
-			this.names[type.var] = [];
-			this.names[type.function] = [];
+			this.names = [];
 		}
 		for (var i = 0; i < this.lines.length; i++) {
-			var blockFound = false;
-			for (var keyword in keywords) {
-				var line = this.lines[i].trim();
-				if (line.length > 0 && line[0] != "~") {
+			var line = this.lines[i].trim();
+			if (line.length > 0 && line[0] != "~") {
+				var blockFound = false;
+				for (var keyword in keywords) {
 					if (line == keyword || line.indexOf(keyword + " ") == 0) {
-						var first = renderLine(line.substring(keyword.length + 1, this.lines[i].length), new Location(line, 1), (this.nameToId).bind(this));
+						var first;
+						var args = [];
+						var substring = line.substring(keyword.length + 1, this.lines[i].length);
+						if (keyword != "function") {
+							first = this.renderLine(substring);
+						}
 						var lines = [];
 						for (var j = i + 1; j < this.lines.length; j++) {
 							if (indentOf(this.lines[j]) > this.indent) {
@@ -77,60 +106,78 @@ class Block {
 							parent = this.parent;
 						}
 						this.children[i] = new Block(lines, keyword, parent, first);
+						if (this.children[i].keyword == "function") {
+							var parts = substring.split("(");
+							this.name = functionToId(parts[0]);
+							var first = this.name + "(";
+							this.args = parts[1].substring(0, parts[1].length - 1).split(",");
+							if (this.args[0].length == 0) this.args.splice(0, 1);
+							for (var k = 0; k < this.args.length; k++) {
+								first += "Var " + this.children[i].varToId(this.args[k]);
+								if (k < this.args.length - 1) {
+									first += ",";
+								}
+							}
+							first += ")";
+							this.children[i].first = first;
+							functions[parts[0]] = new Function(false, this.args.length);
+						}
 						blockFound = true;
-					}
-
-					if (blockFound) {
-						i = j - 1;
-					} else {
-						this.children[i] = renderLine(this.lines[i].trim(), new Location(this.lines[i], 1), (this.nameToId).bind(this));
+						break;
 					}
 				}
+				if (blockFound) {
+					i = j - 1;
+				} else {
+					this.children[i] = line;
+				}
+			}
+		}
+
+		for (var i = 0; i < this.children.length; i++) {
+			if (typeof this.children[i] == "string") {
+				this.children[i] = this.renderLine(this.children[i]);
 			}
 		}
 	}
 
-	nameToId(nameString, nameType) {
+	varToId(nameString) {
 		var block;
 		if (this.hasScope) {
 			block = this;
 		} else {
 			block = this.parent;
 		}
-		var prefix;
-		if (nameType == type.var) {
-			prefix = "v";
-		} else if (nameType == type.function) {
-			prefix = "f";
-		}
-		var index = block.names[nameType].indexOf(nameString);
+		var index = block.names.indexOf(nameString);
 		if (index == -1) {
-			block.names[nameType].push(nameString);
-			index = block.names[nameType].length - 1;
+			block.names.push(nameString);
+			index = block.names.length - 1;
 		}
-		return prefix + index.toString(16);
+		return "v" + index.toString(16);
 	}
 
-	unduplicateScope() {
-		for (var i = 0; i < this.children.length; i++) {
-			if (this.children[i] instanceof Block) {
-				this.children[i].eraseNames(this.names);
-			}
-		}
+	renderLine(line) {
+		return renderLine(line, new Location(line, 1), (this.varToId).bind(this), (functionToId).bind(this), (getFunction).bind(this));
 	}
+}
 
-	eraseNames(names) {
-		for (var type in names) {
-			for (var i = 0; i < names[type].length; i++) {
-				if (this.names[type].indexOf(names[type][i]) != -1) {
-					this.names[type].splice(i, 1);
-				}
-			}
+function functionToId(nameString) {
+	if (nativeFunctions.indexOf(nameString) == -1) {
+		var names = Object.keys(functions);
+		var index = names.indexOf(nameString);
+		if (index == -1) {
+			functions[nameString] = null;
+			index = names.length;
 		}
-		if (this.children[i] instanceof Block) {
-			this.children[i].eraseNames(this.names);
-		}
+		index -= nativeFunctions.length;
+		return "f" + index.toString(16);
+	} else {
+		return nameString;
 	}
+}
+
+function getFunction(name) {
+	return functions[name] || functions[Object.keys(functions)[Number(name[1]) + nativeFunctions.length]];
 }
 
 module.exports = function(string) {
@@ -157,39 +204,53 @@ module.exports = function(string) {
 			lines[i] = lines[i].replace(indent, "\t");
 		}
 	}
-	var parts = [new Block(lines, "main", null)];
+	var parts = [headers, new Block(lines, "main", null)];
+
+	for (var i = 0; i < parts.length; i++) {
+		var block = parts[i];
+		if (block.keyword == "function") {
+			functions[block.name] = new Function(block.children, false);
+		}
+	}
 
 	var foundBlock = true;
 	while (foundBlock) {
 		foundBlock = false;
 		for (var i = 0; i < parts.length; i++) {
 			if (parts[i] instanceof Block) {
+				var block = parts[i];
 				var a = [];
-				a.push(keywords[parts[i].keyword](parts[i]));
-				if (parts[i].hasScope) {
+				a.push(keywords[block.keyword].start(block));
+				if (block.hasScope) {
 					var names = [];
-					for (var j = 0; j < parts[i].names[type.var].length; j++) {
+					for (var j = 0; j < block.names.length; j++) {
 						names.push("v" + j.toString(16));
 					}
 					if (Object.keys(names).length > 0) {
 						a.push("Var " + Object.values(names).join(",") + ";");
 					}
 				}
-				var children = parts[i].children;
+				var children = block.children;
 				for (var j = 0; j < children.length; j++) {
 					if (typeof children[j] == "string") {
 						children[j] += ";";
 					}
 				}
 				a.push(...children);
+				if ("end" in keywords[block.keyword]) {
+					a.push(keywords[block.keyword].end);
+				}
 				a.push("}");
 				parts.splice(i, 1);
-				parts.splice(i, 0, ...a);
+				if (block.keyword == "function") {
+					parts.splice(1, 0, ...a);
+				} else {
+					parts.splice(i, 0, ...a);
+				}
 				foundBlock = true;
 			}
 		}
 	}
-
 	return parts.join("");
 }
 

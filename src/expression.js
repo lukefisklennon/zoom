@@ -3,7 +3,9 @@ var include = require(__dirname + "/include.js");
 var type = include("type");
 var util = include("util");
 
-var nameToId;
+var varToId;
+var functionToId;
+var getFunction;
 
 var calcNames = {
 	"+": "ADD",
@@ -74,7 +76,7 @@ var operators = [
 		number: -1,
 		start: "concat",
 		process: function(expression) {
-			functionOperator.process(expression);
+			variadicFunction(expression);
 		}
 	},
 	{
@@ -83,7 +85,7 @@ var operators = [
 		number: -1,
 		start: "calc",
 		process: function(expression) {
-			functionOperator.process(expression);
+			variadicFunction(expression);
 			expression.children.unshift(calcNames[expression.symbol]);
 		}
 	}
@@ -93,9 +95,24 @@ var functionOperator = {
 	type: type.var,
 	number: -1,
 	process: function(expression) {
+		var f = getFunction(expression.start);
+		var n = expression.children.length;
+		if (n < f.argc) {
+			for (var i = 0; i < f.argc - n; i++) {
+				expression.children.push("Var()");
+			}
+		} else if (n > f.argc) {
+			for (var i = 0; i < n - f.argc; i++) {
+				expression.children.splice(f.argc, 1);
+			}
+		}
 		varify(expression);
-		expression.children.unshift(String(expression.children.length));
 	}
+}
+
+function variadicFunction(expression) {
+	varify(expression);
+	expression.children.unshift(String(expression.children.length));
 }
 
 function varify(expression) {
@@ -147,7 +164,7 @@ class Value {
 		this.type = util.typeOf(string);
 		this.location = location;
 		if (this.type == "VAR") {
-			this.string = nameToId(this.string, type.var);
+			this.string = varToId(this.string);
 		} else if (this.type == "NUMBER") {
 			this.string = util.floatify(this.string);
 		}
@@ -218,7 +235,7 @@ class Expression {
 			}
 			this.operator = functionOperator;
 			this.type = this.operator.type;
-			this.start = parts[0];
+			this.start = functionToId(parts[0]);
 		} else {
 			if (this.string == "()") {
 				this.string = groups[0];
@@ -256,8 +273,10 @@ class Expression {
 	}
 }
 
-module.exports = function(string, location, nameFunction) {
-	nameToId = nameFunction;
+module.exports = function(string, location, vtid, ftid, gf) {
+	varToId = vtid;
+	functionToId = ftid;
+	getFunction = gf;
 	var parts = [];
 	if (util.isExpression(string)) {
 		parts.push(new Expression(string, location));
