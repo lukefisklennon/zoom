@@ -256,6 +256,12 @@ class Expression {
 			for (var symbol in symbols) {
 				var parts = util.split(this.string, symbol, Object.keys(symbols));
 				if (parts.length > 1) {
+					// for (var i = 0; i < parts.length; i++) {
+					// 	if (parts[i].length == 0) {
+					// 		parts.splice(i, 1);
+					// 		i--;
+					// 	}
+					// }
 					this.children = parts;
 					this.symbol = symbol;
 					this.operator = symbols[symbol];
@@ -289,6 +295,8 @@ class Expression {
 }
 
 module.exports = function(string, location, vtid, ftid, gf) {
+	if (string.length == 0) return string;
+
 	varToId = vtid;
 	functionToId = ftid;
 	getFunction = gf;

@@ -1,15 +1,17 @@
+function wonder(number)
+	if number % 2 == 0
+		number /= 2
+	else
+		number = (number * 3) + 1
+	return number
+
 string = input("Enter start number: ")
 start = string + 0
 current = start
 sequence = string
 
 while current != 1
-	sequence ..= " -> "
-	if current % 2 == 0
-		current /= 2
-	else
-		current = (current * 3) + 1
-
-	sequence ..= current
+	current = wonder(current)
+	sequence ..= " -> " .. current
 
 print(sequence)
