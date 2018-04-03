@@ -31,6 +31,9 @@ module.exports = {
 		parts.push(next);
 		return parts;
 	},
+	notIgnore: function(s) {
+		return (s.length > 0 && s[0] != "#");
+	},
 	isExpression: function(s) {
 		return (this.typeOf(s) == null && (this.containsOperator(s) || s.indexOf("(") != -1 || s.indexOf(")") != -1));
 	},

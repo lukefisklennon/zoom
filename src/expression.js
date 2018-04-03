@@ -3,18 +3,29 @@ var include = require(__dirname + "/include.js");
 var type = include("type");
 var util = include("util");
 
-var varToId;
-var functionToId;
-var getFunction;
-
 var calcNames = {
 	"+": "ADD",
 	"-": "SUBTRACT",
 	"*": "MULTIPLY",
-	"/": "DIVIDE"
+	"/": "DIVIDE",
+	"^": "POWER",
+	"%": "REMAINDER"
 };
 
+var varToId;
+var functionToId;
+var getFunction;
+
 var operators = [
+	{
+		symbols: ["return "],
+		type: type.undefined,
+		number: 1,
+		start: "return",
+		process: function(expression) {
+			expression.children.shift();
+		}
+	},
 	{
 		symbols: ["="],
 		type: type.var,
@@ -80,7 +91,7 @@ var operators = [
 		}
 	},
 	{
-		symbols: ["+", "-", "*", "/"],
+		symbols: ["+", "-", "*", "/", "^", "%"],
 		type: type.var,
 		number: -1,
 		start: "calc",
@@ -229,13 +240,15 @@ class Expression {
 		if (groups.length > 0 && !hasOperator && this.string != "()") {
 			this.string = this.string.replace("()", "(" + groups[0] + ")");
 			var parts = this.string.split("(");
-			this.children = parts[1].substring(0, parts[1].length - 1).split(",");
+			this.start = functionToId(parts[0]);
+			parts.shift();
+			var second = parts.join("(");
+			this.children = second.substring(0, second.length - 1).split(",");
 			if (this.children[0].length == 0) {
 				this.children.shift();
 			}
 			this.operator = functionOperator;
 			this.type = this.operator.type;
-			this.start = functionToId(parts[0]);
 		} else {
 			if (this.string == "()") {
 				this.string = groups[0];
@@ -264,10 +277,12 @@ class Expression {
 				this.children[i] = this.children[i].replace("\"\"", "\"" + strings[0] + "\"");
 				strings.shift();
 			}
-			if (util.isExpression(this.children[i])) {
-				this.children[i] = new Expression(this.children[i], location);
-			} else {
-				this.children[i] = new Value(this.children[i], location);
+			if (this.children[i].length > 0) {
+				if (util.isExpression(this.children[i])) {
+					this.children[i] = new Expression(this.children[i], location);
+				} else {
+					this.children[i] = new Value(this.children[i], location);
+				}
 			}
 		}
 	}

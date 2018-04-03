@@ -24,6 +24,7 @@ var functions = {
 	"input": new Function(false, 1)
 };
 
+var words = ["if", "else", "while", "function", "return"];
 var keywords = {
 	main: {
 		start: function(block) {
@@ -72,31 +73,44 @@ class Block {
 		this.keyword = keyword;
 		this.hasScope = false;
 		this.parent = parent;
-		if (first !== undefined) {
-			this.first = first;
-		}
-		if (keyword == ("main" || "function")) {
+		if (keyword == "main" || keyword == "function") {
 			this.hasScope = true;
 			this.names = [];
+			if (keyword == "function") {
+				var parts = first.split("(");
+				this.name = functionToId(parts[0]);
+				this.first = this.name + "(";
+				this.args = parts[1].substring(0, parts[1].length - 1).split(",");
+				if (this.args[0].length == 0) this.args.splice(0, 1);
+				for (var k = 0; k < this.args.length; k++) {
+					this.first += "Var " + this.varToId(this.args[k]);
+					if (k < this.args.length - 1) {
+						first += ",";
+					}
+				}
+				this.first += ")";
+				functions[parts[0]] = new Function(false, this.args.length);
+			}
+		}
+		if (first !== undefined && this.first === undefined) {
+			this.first = this.renderLine(first);
 		}
 		for (var i = 0; i < this.lines.length; i++) {
 			var line = this.lines[i].trim();
-			if (line.length > 0 && line[0] != "~") {
+			if (util.notIgnore(line)) {
 				var blockFound = false;
 				for (var keyword in keywords) {
 					if (line == keyword || line.indexOf(keyword + " ") == 0) {
-						var first;
 						var args = [];
-						var substring = line.substring(keyword.length + 1, this.lines[i].length);
-						if (keyword != "function") {
-							first = this.renderLine(substring);
-						}
+						var first = line.substring(keyword.length + 1, this.lines[i].length);
 						var lines = [];
 						for (var j = i + 1; j < this.lines.length; j++) {
-							if (indentOf(this.lines[j]) > this.indent) {
-								lines.push(this.lines[j]);
-							} else {
-								break;
+							if (util.notIgnore(this.lines[j].trim())) {
+								if (indentOf(this.lines[j]) > this.indent) {
+									lines.push(this.lines[j]);
+								} else {
+									break;
+								}
 							}
 						}
 						var parent;
@@ -105,23 +119,7 @@ class Block {
 						} else {
 							parent = this.parent;
 						}
-						this.children[i] = new Block(lines, keyword, parent, first);
-						if (this.children[i].keyword == "function") {
-							var parts = substring.split("(");
-							this.name = functionToId(parts[0]);
-							var first = this.name + "(";
-							this.args = parts[1].substring(0, parts[1].length - 1).split(",");
-							if (this.args[0].length == 0) this.args.splice(0, 1);
-							for (var k = 0; k < this.args.length; k++) {
-								first += "Var " + this.children[i].varToId(this.args[k]);
-								if (k < this.args.length - 1) {
-									first += ",";
-								}
-							}
-							first += ")";
-							this.children[i].first = first;
-							functions[parts[0]] = new Function(false, this.args.length);
-						}
+						this.children.push(new Block(lines, keyword, parent, first));
 						blockFound = true;
 						break;
 					}
@@ -129,7 +127,7 @@ class Block {
 				if (blockFound) {
 					i = j - 1;
 				} else {
-					this.children[i] = line;
+					this.children.push(line);
 				}
 			}
 		}
@@ -148,10 +146,15 @@ class Block {
 		} else {
 			block = this.parent;
 		}
-		var index = block.names.indexOf(nameString);
+
+		var index = -1;
+		if (block.keyword == "function") index = block.args.indexOf(nameString);
 		if (index == -1) {
-			block.names.push(nameString);
-			index = block.names.length - 1;
+			index = block.names.indexOf(nameString);
+			if (index == -1) {
+				block.names.push(nameString);
+				index = block.names.length - 1;
+			}
 		}
 		return "v" + index.toString(16);
 	}
@@ -226,6 +229,7 @@ module.exports = function(string) {
 					for (var j = 0; j < block.names.length; j++) {
 						names.push("v" + j.toString(16));
 					}
+					// console.log(block.keyword, block.names, block.args);
 					if (Object.keys(names).length > 0) {
 						a.push("Var " + Object.values(names).join(",") + ";");
 					}
@@ -268,10 +272,10 @@ function formatLine(s) {
 		}
 		if (s[i] == " " && !spaceBefore && !spaceAfter && !inString) {
 			var removeSpace = true;
-			for (var keyword in keywords) {
-				var start = i - keyword.length;
+			for (var j = 0; j < words.length; j++) {
+				var start = i - words[j].length;
 				if (start >= 0) {
-					if (s.substring(start, i) == keyword) {
+					if (s.substring(start, i) == words[j]) {
 						removeSpace = false;
 					}
 				}

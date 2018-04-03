@@ -6,6 +6,7 @@
 #include <cstring>
 #include <iostream>
 #include <sstream>
+#include <cmath>
 
 #define UNDEFINED 0
 #define NUMBER 1
@@ -19,6 +20,8 @@
 #define SUBTRACT 2
 #define MULTIPLY 3
 #define DIVIDE 4
+#define POWER 5
+#define REMAINDER 6
 
 #define ARGS int argc, ...
 #define START_ARGS va_list args;va_start(args,argc);
@@ -245,6 +248,12 @@ Var calc(byte operation, ARGS) {
 			break;
 		case DIVIDE:
 			result /= number;
+			break;
+		case POWER:
+			result = pow(result, number);
+			break;
+		case REMAINDER:
+			result = fmod(result, number);
 			break;
 		}
 	}
