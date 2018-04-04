@@ -1,7 +1,9 @@
-- [ ] Single- and multi-line comments
-- [ ] Block trees
-- [ ] If statements, for loops and while loops
-- [ ] Function definitions
+- [ ] For loops and iteration
 - [ ] Complex data types (lists and maps)
 - [ ] Module definition, loading and access
 - [ ] Native module support
+- [ ] Multi-line comments
+- [ ] Compiler and run-time error checking
+- [ ] Event loop integration with `libuv`
+- [ ] Basic API wrappers
+- [ ] Useful frameworks and libraries

@@ -1,14 +1,20 @@
 # Zoom
 
-This is a brand-new programming language that's in its very earliest stages, so you probably won't be able to contribute yet. Watch this space, though.
+This is a brand-new programming language that's being drafted.
 
 ## Aim
 
-To create a modular, concise server-side language that's blazing fast. Developers will be able to create concurrent, parallel and even distributed systems, all with the same syntax. Zoom will be dynamically typed and allocated, but compiled to native machine code.
+To create a modular, concise server-side language that's blazing fast. Developers will be able to create concurrent, parallel and even distributed systems, all with the same syntax. Zoom will be high-level and dynamically typed, but compiled to native machine code.
 
 ## How it works
 
 Currently, the compiler is written in JavaScript (Node.js) but will eventually be ported to Zoom itself. Zoom source code is compiled to C++ temporarily, before using the system's compiler to generate machine code.
+
+## Contributed
+
+The core concepts of Zoom are still under development, so I'm welcoming suggestions.
+
+You can also begin the process of error-checking, by compiling malformed source code, and adding checks to the compiler and `zoom.h`.
 
 ## To do
 
