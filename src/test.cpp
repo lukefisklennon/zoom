@@ -1,2 +1,2 @@
 #include "zoom.h"
-Var f0(Var v0){if(toBoolean(compare(false,calc(REMAINDER,2,v0,Var(2.0)),Var(0.0)))){mcalc(DIVIDE,&v0,Var(2.0));}else{assign(&v0,calc(ADD,2,calc(MULTIPLY,2,v0,Var(3.0)),Var(1.0)));}return(v0);return Var();}int main(int argc,char *argv[]){Var v0,v1,v2,v3;assign(&v2,input(Var("Enter start number: ")));assign(&v3,calc(ADD,2,v2,Var(0.0)));assign(&v0,&v3);assign(&v1,&v2);while(toBoolean(compare(true,&v0,Var(1.0)))){assign(&v0,f0(v0));mconcat(&v1,concat(2,Var(" -> "),v0));}print(v1);return 0;}
+Var f0(Var v0){return(calc(MULTIPLY,2,v0,Var(2.0)));return Var();}int main(int argc,char *argv[]){Var v0;assign(&v0,calc(ADD,2,input(Var("Enter number: ")),Var(0.0)));if(toBoolean(lt(true,&v0,Var(0.0)))){print(f0(v0));}return 0;}

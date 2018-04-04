@@ -1,17 +1,7 @@
-function wonder(number)
-	if number % 2 == 0
-		number /= 2
-	else
-		number = (number * 3) + 1
-	return number
+number = input("Enter number: ") + 0
 
-string = input("Enter start number: ")
-start = string + 0
-current = start
-sequence = string
+if number >= 0
+	print(double(number))
 
-while current != 1
-	current = wonder(current)
-	sequence ..= " -> " .. current
-
-print(sequence)
+function double(n)
+	return n * 2

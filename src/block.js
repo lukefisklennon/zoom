@@ -89,7 +89,18 @@ class Block {
 					}
 				}
 				this.first += ")";
-				functions[parts[0]] = new Function(false, this.args.length);
+			}
+		}
+		for (var i = 0; i < this.lines.length; i++) {
+			var line = this.lines[i].trim();
+			if (util.notIgnore(line) && line.indexOf("function" + " ") == 0) {
+				var parts = line.split(" ")[1].split("(");
+				var name = parts[0];
+				var args = parts[1].substring(0, parts[1].length - 1).split(",");
+				if (args[0].length == 0) args.splice(0, 1);
+				functions[name] = new Function(false, args.length);
+				var offset = this.addBlock(line, "function", i);
+				this.lines.splice(i, offset);
 			}
 		}
 		if (first !== undefined && this.first === undefined) {
@@ -101,40 +112,16 @@ class Block {
 				var blockFound = false;
 				for (var keyword in keywords) {
 					if (line == keyword || line.indexOf(keyword + " ") == 0) {
-						var args = [];
-						var first = line.substring(keyword.length + 1, this.lines[i].length);
-						var lines = [];
-						for (var j = i + 1; j < this.lines.length; j++) {
-							if (util.notIgnore(this.lines[j].trim())) {
-								if (indentOf(this.lines[j]) > this.indent) {
-									lines.push(this.lines[j]);
-								} else {
-									break;
-								}
-							}
-						}
-						var parent;
-						if (this.hasScope) {
-							parent = this;
-						} else {
-							parent = this.parent;
-						}
-						this.children.push(new Block(lines, keyword, parent, first));
+						var offset = this.addBlock(line, keyword, i);
 						blockFound = true;
 						break;
 					}
 				}
 				if (blockFound) {
-					i = j - 1;
+					i = offset - 1;
 				} else {
-					this.children.push(line);
+					this.children.push(this.renderLine(line));
 				}
-			}
-		}
-
-		for (var i = 0; i < this.children.length; i++) {
-			if (typeof this.children[i] == "string") {
-				this.children[i] = this.renderLine(this.children[i]);
 			}
 		}
 	}
@@ -153,10 +140,33 @@ class Block {
 			index = block.names.indexOf(nameString);
 			if (index == -1) {
 				block.names.push(nameString);
-				index = block.names.length - 1;
+				index = (block.names.length - 1);
 			}
 		}
 		return "v" + index.toString(16);
+	}
+
+	addBlock(line, keyword, offset) {
+		var args = [];
+		var first = line.substring(keyword.length + 1, line.length);
+		var lines = [];
+		for (var j = offset + 1; j < this.lines.length; j++) {
+			if (util.notIgnore(this.lines[j].trim())) {
+				if (indentOf(this.lines[j]) > this.indent) {
+					lines.push(this.lines[j]);
+				} else {
+					break;
+				}
+			}
+		}
+		var parent;
+		if (this.hasScope) {
+			parent = this;
+		} else {
+			parent = this.parent;
+		}
+		this.children.push(new Block(lines, keyword, parent, first));
+		return j;
 	}
 
 	renderLine(line) {
@@ -169,7 +179,9 @@ function functionToId(nameString) {
 		var names = Object.keys(functions);
 		var index = names.indexOf(nameString);
 		if (index == -1) {
-			functions[nameString] = null;
+			if (!(nameString in functions)) {
+				functions[nameString] = null;
+			}
 			index = names.length;
 		}
 		index -= nativeFunctions.length;
@@ -227,9 +239,8 @@ module.exports = function(string) {
 				if (block.hasScope) {
 					var names = [];
 					for (var j = 0; j < block.names.length; j++) {
-						names.push("v" + j.toString(16));
+						names.push("v" + (j/* + block.args.length*/).toString(16));
 					}
-					// console.log(block.keyword, block.names, block.args);
 					if (Object.keys(names).length > 0) {
 						a.push("Var " + Object.values(names).join(",") + ";");
 					}

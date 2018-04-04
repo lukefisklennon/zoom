@@ -1,0 +1,20 @@
+max = input("Enter range: ") + 0
+results = "Prime numbers: "
+
+i = 2
+while i < max
+	prime = true
+	j = 2
+	while j < i
+		if i % j == 0
+			prime = false
+		j += 1
+
+	if prime
+		if i > 2
+			results ..= ", "
+		results ..= i
+
+	i += 1
+
+print(results)

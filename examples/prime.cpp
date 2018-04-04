@@ -1,0 +1,2 @@
+#include "zoom.h"
+int main(int argc,char *argv[]){Var v0,v1,v2,v3,v4;assign(&v0,calc(ADD,2,input(Var("Enter range: ")),Var(0.0)));assign(&v1,"Prime numbers: ");assign(&v2,2.0);while(toBoolean(lt(false,&v2,&v0))){assign(&v3,true);assign(&v4,2.0);while(toBoolean(lt(false,&v4,&v2))){if(toBoolean(compare(false,calc(REMAINDER,2,v2,v4),Var(0.0)))){assign(&v3,false);}mcalc(ADD,&v4,Var(1.0));}if(toBoolean(&v3)){if(toBoolean(gt(false,&v2,Var(2.0)))){mconcat(&v1,Var(", "));}mconcat(&v1,&v2);}mcalc(ADD,&v2,Var(1.0));}print(v1);return 0;}
