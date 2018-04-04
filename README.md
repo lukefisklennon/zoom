@@ -10,7 +10,7 @@ To create a modular, concise server-side language that's blazing fast. Developer
 
 Currently, the compiler is written in JavaScript (Node.js) but will eventually be ported to Zoom itself. Zoom source code is compiled to C++ temporarily, before using the system's compiler to generate machine code.
 
-## Contributed
+## Contributing
 
 The core concepts of Zoom are still under development, so I'm welcoming suggestions.
 
