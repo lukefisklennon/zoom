@@ -1,16 +1,16 @@
-// constructing vectors
+// vector::operator[]
 #include <iostream>
 #include <vector>
 
 int main ()
 {
-	int array[3] = {0, 1, 2};
-  std::vector<int> fifth = {1, 2, 3, 4};
-  fifth = array;
+  std::vector<int> myvector (10);   // 10 zero-initialized elements
 
-  std::cout << "The contents of fifth are:";
-  for (std::vector<int>::iterator it = fifth.begin(); it != fifth.end(); ++it)
-    std::cout << ' ' << *it;
+  for (unsigned i=0; i<10; i++) myvector[i]=i;
+
+  std::cout << "myvector contains:";
+  for (unsigned i=0; i<10; i++)
+    std::cout << ' ' << myvector[i];
   std::cout << '\n';
 
   return 0;

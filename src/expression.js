@@ -99,6 +99,17 @@ var operators = [
 			variadic(expression.children);
 			expression.children.unshift(calcNames[expression.symbol]);
 		}
+	},
+	{
+		symbols: ["."],
+		type: type.var,
+		number: 2,
+		start: function(expression) {
+			return "_" + expression.children[0];
+		},
+		process: function(expression) {
+
+		}
 	}
 ];
 
@@ -118,6 +129,15 @@ var functionOperator = {
 			}
 		}
 		varify(expression);
+	}
+}
+
+var accessOperator = {
+	type: type.var,
+	number: 2,
+	start: "access",
+	process: function(expression) {
+		modifier(expression.children);
 	}
 }
 
@@ -202,6 +222,7 @@ class Expression {
 
 		var level = 0;
 		var groupStart = -1;
+		var groupChar;
 		var inString = false;
 		var stringStart = -1;
 		var stringChar;
@@ -209,12 +230,13 @@ class Expression {
 		for (var i = 0; i < this.string.length; i++) {
 			if (level == 0 && !inString && this.string[i] in symbols) {
 				hasOperator = true;
-			} else if (this.string[i] == "(") {
+			} else if ((groupChar != "[" && this.string[i] == "(") || (groupChar != "(" && this.string[i] == "[")) {
 				level++;
 				if (level == 1) {
 					groupStart = i;
+					groupChar = this.string[i];
 				}
-			} else if (this.string[i] == ")") {
+			} else if ((groupChar == "(" && this.string[i] == ")") || (groupChar == "[" && this.string[i] == "]")) {
 				level--;
 				if (level == 0) {
 					var group = this.string.substring(groupStart + 1, i);
@@ -243,20 +265,23 @@ class Expression {
 			}
 		}
 
-		if (groups.length > 0 && !hasOperator && this.string != "()") {
-			this.string = this.string.replace("()", "(" + groups[0] + ")");
-			var parts = this.string.split("(");
-			this.start = functionToId(parts[0]);
-			parts.shift();
-			var second = parts.join("(");
-			this.children = second.substring(0, second.length - 1).split(",");
-			if (this.children[0].length == 0) {
-				this.children.shift();
+		if (groups.length > 0 && !hasOperator) {
+			if (groupChar == "(" && this.string != "()") {
+				this.children = groups;
+				this.operator = functionOperator;
+				this.start = functionToId(this.string.split("(")[0]);
+			} else if (groupChar == "[" && this.string != "[]") {
+				this.children = [this.string.split("[")[0], groups[0]];
+				this.operator = accessOperator;
+				if (typeof this.operator.start === "function") {
+					this.start = this.operator.start(expression);
+				} else {
+					this.start = this.operator.start;
+				}
 			}
-			this.operator = functionOperator;
 			this.type = this.operator.type;
 		} else {
-			if (this.string == "()") {
+			if (this.string == "()" || this.string == "[]") {
 				this.string = groups[0];
 			}
 			for (var symbol in symbols) {
@@ -279,9 +304,15 @@ class Expression {
 		}
 
 		for (var i = 0; i < this.children.length; i++) {
-			var n = (this.children[i].match(/\(\)/g) || []).length;
+			if (groupChar == "(") {
+				var n = (this.children[i].match(/\(\)/g) || []).length;
+				var end = ")";
+			} else if (groupChar == "[") {
+				var n = (this.children[i].match(/\[\]/g) || []).length;
+				var end = "]";
+			}
 			for (var j = 0; j < n; j++) {
-				this.children[i] = this.children[i].replace("()", "(" + groups[0] + ")");
+				this.children[i] = this.children[i].replace(groupChar + end, groupChar + groups[0] + end);
 				groups.shift();
 			}
 			var n = (this.children[i].match(/""/g) || []).length;
@@ -320,7 +351,6 @@ module.exports = function(string, location, vtid, ftid, gf) {
 			var expression = parts[i];
 			if (expression instanceof Expression) {
 				var a = [expression.start + "("];
-				// console.log(parts[i]);
 				expression.operator.process(parts[i]);
 				for (var j = 0; j < expression.children.length; j++) {
 					a.push(expression.children[j]);

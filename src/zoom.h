@@ -1,13 +1,15 @@
 // std::cout<<v0.number<<std::endl;
 
-#include <cstddef>
+#include <iostream>
 #include <string>
+#include <sstream>
+#include <vector>
+#include <cmath>
+#include <cstddef>
 #include <cstdarg>
 #include <cstring>
-#include <iostream>
-#include <sstream>
-#include <cmath>
-#include <vector>
+
+#include "lib.h"
 
 #define UNDEFINED 0
 #define NUMBER 1
@@ -34,12 +36,50 @@
 typedef unsigned char byte;
 
 struct Var;
-void assign(Var *, Var *);
-
 typedef double Number;
 typedef bool Boolean;
 typedef std::string String;
 typedef std::vector<Var> Array;
+
+void assign(Var *v1, Var *v2);
+void assign(Var *v1, Var v2);
+void assign(Var *v, Number n);
+void assign(Var *v, Boolean b);
+void assign(Var *v, String s);
+void assign(Var *v, const char *s);
+void assign(Var *v, const std::initializer_list<Var>& a);
+Var access(Var *v, Var *key);
+Var access(Var *v, Var key);
+bool compare(bool inverse, Var *v1, Var *v2);
+bool compare(bool inverse, Var v1, Var v2);
+bool compare(bool inverse, Var *v1, Var v2);
+bool compare(bool inverse, Var v1, Var *v2);
+bool gt(bool inverse, Var *v1, Var *v2);
+bool gt(bool inverse, Var v1, Var v2);
+bool gt(bool inverse, Var *v1, Var v2);
+bool gt(bool inverse, Var v1, Var *v2);
+bool lt(bool inverse, Var *v1, Var *v2);
+bool lt(bool inverse, Var v1, Var v2);
+bool lt(bool inverse, Var *v1, Var v2);
+bool lt(bool inverse, Var v1, Var *v2);
+Number toNumber(Var *v);
+Var calc(byte operation, ARGS);
+Var mcalc(byte operation, Var *v1, Var *v2);
+Var mcalc(byte operation, Var v1, Var v2);
+Var mcalc(byte operation, Var *v1, Var v2);
+Var mcalc(byte operation, Var v1, Var *v2);
+Var concat(ARGS);
+Var mconcat(Var *v1, Var *v2);
+Var mconcat(Var v1, Var v2);
+Var mconcat(Var *v1, Var v2);
+Var mconcat(Var v1, Var *v2);
+bool toBoolean(Var *v);
+bool toBoolean(Number n);
+bool toBoolean(Boolean b);
+bool toBoolean(const char *s);
+void print(Var *v, bool endLine);
+Var print(Var var);
+Var input(Var var);
 
 struct Var {
 	byte type;
@@ -131,6 +171,18 @@ void assign(Var *v, const char *s) {
 void assign(Var *v, const std::initializer_list<Var>& a) {
 	v->type = ARRAY;
 	v->array.assign(a);
+}
+
+Var access(Var *v, Var *key) {
+	switch (v->type) {
+	case ARRAY:
+		return v->array[toNumber(key)];
+		break;
+	}
+}
+
+Var access(Var *v, Var key) {
+	return access(v, &key);
 }
 
 bool compare(bool inverse, Var *v1, Var *v2) {

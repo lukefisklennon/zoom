@@ -1,2 +1,2 @@
-array = [0, 1, 2]
-array[call()]
+a = [1, 2, 3]
+a.insert(4)
