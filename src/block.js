@@ -24,7 +24,7 @@ var functions = {
 	"input": new Function(false, 1)
 };
 
-var words = ["if", "else", "while", "function", "return"];
+var words = ["if", "else", "while", "for", "function", "return"];
 var keywords = {
 	main: {
 		start: function(block) {
@@ -55,6 +55,11 @@ var keywords = {
 			}
 			string += block.first + ")){";
 			return string;
+		}
+	},
+	for: {
+		start: function(block) {
+			console.log("First:", block.first);
 		}
 	},
 	function: {

@@ -46,6 +46,8 @@ module.exports = {
 			return "STRING";
 		} else if (this.isVar(s)) {
 			return "VAR";
+		} else if (this.isArray(s)) {
+			return "ARRAY";
 		}
 		return null;
 	},
@@ -66,6 +68,9 @@ module.exports = {
 	isString: function(s) {
 		return (((s[0] == "\"") && (s[s.length - 1] == "\"")) || ((s[0] == "'") && (s[s.length - 1] == "'")));
 	},
+	isArray: function(s) {
+		return (s[0] == "[" && s[s.length - 1] == "]");
+	},
 	containsOperator: function(s) {
 		for (var symbol in global.symbols) {
 			if (s.indexOf(symbol) != -1) {
@@ -75,7 +80,7 @@ module.exports = {
 		return false;
 	},
 	isVar: function(s) {
-		return (isNaN(parseFloat(s[0])) && !this.isBoolean(s) && !this.containsOperator(s) && s.indexOf("(") == -1 && s.indexOf(")") && s.indexOf(".") == -1 && s.indexOf (" ") == -1);
+		return (s.match(/^[a-zA-Z_$][a-zA-Z_$0-9]*$/g) !== null);
 	},
 	floatify: function(s) {
 		if (s.indexOf(".") == -1) {

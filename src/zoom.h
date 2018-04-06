@@ -7,6 +7,7 @@
 #include <iostream>
 #include <sstream>
 #include <cmath>
+#include <vector>
 
 #define UNDEFINED 0
 #define NUMBER 1
@@ -32,18 +33,20 @@
 
 typedef unsigned char byte;
 
+struct Var;
+void assign(Var *, Var *);
+
 typedef double Number;
 typedef bool Boolean;
 typedef std::string String;
-
-struct Var;
-void assign(Var *, Var*);
+typedef std::vector<Var> Array;
 
 struct Var {
 	byte type;
 	Number number;
 	Boolean boolean;
 	String string;
+	Array array;
 	Var(const Var &v) {
 		this->type = v.type;
 		if (this->type != UNDEFINED) {
@@ -78,6 +81,9 @@ struct Var {
 	Var(const char *s) {
 		type = STRING;
 		string = String(s);
+	}
+	Var(const std::initializer_list<Var>& a) {
+		array.assign(a);
 	}
 };
 
@@ -120,6 +126,11 @@ void assign(Var *v, String s) {
 void assign(Var *v, const char *s) {
 	v->type = STRING;
 	v->string = String(s);
+}
+
+void assign(Var *v, const std::initializer_list<Var>& a) {
+	v->type = ARRAY;
+	v->array.assign(a);
 }
 
 bool compare(bool inverse, Var *v1, Var *v2) {

@@ -32,7 +32,7 @@ var operators = [
 		number: 2,
 		start: "assign",
 		process: function(expression) {
-			addressify(expression);
+			addressify(expression.children);
 		}
 	},
 	{
@@ -68,7 +68,7 @@ var operators = [
 		number: 2,
 		start: "mcalc",
 		process: function(expression) {
-			modifier(expression);
+			modifier(expression.children);
 			expression.children.unshift(calcNames[expression.symbol[0]]);
 		}
 	},
@@ -78,7 +78,7 @@ var operators = [
 		number: 2,
 		start: "mconcat",
 		process: function(expression) {
-			modifier(expression);
+			modifier(expression.children);
 		}
 	},
 	{
@@ -87,7 +87,7 @@ var operators = [
 		number: -1,
 		start: "concat",
 		process: function(expression) {
-			variadicFunction(expression);
+			variadic(expression.children);
 		}
 	},
 	{
@@ -96,7 +96,7 @@ var operators = [
 		number: -1,
 		start: "calc",
 		process: function(expression) {
-			variadicFunction(expression);
+			variadic(expression.children);
 			expression.children.unshift(calcNames[expression.symbol]);
 		}
 	}
@@ -121,45 +121,45 @@ var functionOperator = {
 	}
 }
 
-function variadicFunction(expression) {
-	varify(expression);
-	expression.children.unshift(String(expression.children.length));
+function variadic(children) {
+	varify(children);
+	children.unshift(String(children.length));
 }
 
-function varify(expression) {
-	for (var i = 0; i < expression.children.length; i++) {
-		if (expression.children[i].type != "VAR") {
-			if (expression.children[i] instanceof Expression) {
-				expression.children[i].start = "Var(" + expression.children[i].start;
-				expression.children[i].end += ")";
-			} else if (expression.children[i] instanceof Value) {
-				expression.children[i].string = "Var(" + expression.children[i].string + ")";
+function varify(children) {
+	for (var i = 0; i < children.length; i++) {
+		if (children[i].type != "VAR") {
+			if (children[i] instanceof Expression) {
+				children[i].start = "Var(" + children[i].start;
+				children[i].end += ")";
+			} else if (children[i] instanceof Value) {
+				children[i].string = "Var(" + children[i].string + ")";
 			}
 		}
 	}
 }
 
-function addressify(expression) {
-	for (var i = 0; i < expression.children.length; i++) {
-		if (expression.children[i] instanceof Value && expression.children[i].type == "VAR") {
-			expression.children[i].string = "&" + expression.children[i].string;
+function addressify(children) {
+	for (var i = 0; i < children.length; i++) {
+		if (children[i] instanceof Value && children[i].type == "VAR") {
+			children[i].string = "&" + children[i].string;
 		}
 	}
 }
 
+function modifier(children) {
+	varify(children);
+	addressify(children);
+}
+
 function comparison(expression, symbols) {
-	varify(expression);
-	addressify(expression);
+	varify(expression.children);
+	addressify(expression.children);
 	if (expression.symbol == symbols[0]) {
 		expression.children.unshift("false");
 	} else if (expression.symbol == symbols[1]) {
 		expression.children.unshift("true");
 	}
-}
-
-function modifier(expression) {
-	varify(expression);
-	addressify(expression);
 }
 
 global.symbols = {};
@@ -178,6 +178,12 @@ class Value {
 			this.string = varToId(this.string);
 		} else if (this.type == "NUMBER") {
 			this.string = util.floatify(this.string);
+		} else if (this.type == "ARRAY") {
+			var values = this.string.substring(1, this.string.length - 1).split(",");
+			for (var i = 0; i < values.length; i++) {
+				values[i] = "Var(" + new Value(values[i], location).string + ")";
+			}
+			this.string = "{" + values.join(",") + "}";
 		}
 	}
 }

@@ -1,7 +1,2 @@
-number = input("Enter number: ") + 0
-
-if number >= 0
-	print(double(number))
-
-function double(n)
-	return n * 2
+array = [0, 1, 2]
+array[call()]

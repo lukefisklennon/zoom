@@ -1,2 +1,2 @@
 #include "zoom.h"
-Var f0(Var v0){return(calc(MULTIPLY,2,v0,Var(2.0)));return Var();}int main(int argc,char *argv[]){Var v0;assign(&v0,calc(ADD,2,input(Var("Enter number: ")),Var(0.0)));if(toBoolean(lt(true,&v0,Var(0.0)))){print(f0(v0));}return 0;}
+int main(int argc,char *argv[]){Var v0;assign(&v0,{Var(0.0),Var(1.0),Var(2.0)});return 0;}
