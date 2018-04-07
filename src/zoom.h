@@ -9,8 +9,6 @@
 #include <cstdarg>
 #include <cstring>
 
-#include "lib.h"
-
 #define UNDEFINED 0
 #define NUMBER 1
 #define BOOLEAN 2
@@ -110,6 +108,10 @@ struct Var {
 		type = NUMBER;
 		number = n;
 	}
+	Var(std::size_t n) {
+		type = NUMBER;
+		number = static_cast<double>(n);
+	}
 	Var(Boolean b) {
 		type = BOOLEAN;
 		boolean = b;
@@ -126,6 +128,8 @@ struct Var {
 		array.assign(a);
 	}
 };
+
+#include "lib.h"
 
 void assign(Var *v1, Var* v2) {
 	v1->type = v2->type;
@@ -149,6 +153,11 @@ void assign(Var *v1, Var v2) {
 }
 
 void assign(Var *v, Number n) {
+	v->type = NUMBER;
+	v->number = n;
+}
+
+void assign(Var *v, std::size_t n) {
 	v->type = NUMBER;
 	v->number = n;
 }
@@ -409,35 +418,4 @@ bool toBoolean(Boolean b) {
 
 bool toBoolean(const char *s) {
 	return (strlen(s) != 0);
-}
-
-void print(Var *v, bool endLine) {
-	switch (v->type) {
-	case STRING:
-		std::cout << v->string;
-		break;
-	case NUMBER:
-		std::cout << v->number;
-		break;
-	case BOOLEAN:
-		std::cout << v->boolean;
-		break;
-	}
-	if (endLine) {
-		std::cout << std::endl;
-	}
-}
-
-Var print(Var var) {
-	print(&var, true);
-	return Var();
-}
-
-Var input(Var var) {
-	if (var.type != UNDEFINED) {
-		print(&var, false);
-	}
-	String in;
-	std::getline(std::cin, in);
-	return Var(in);
 }

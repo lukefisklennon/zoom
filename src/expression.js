@@ -105,10 +105,18 @@ var operators = [
 		type: type.var,
 		number: 2,
 		start: function(expression) {
-			return "_" + expression.children[0];
+			var start = expression.children[1];
+			if (start.indexOf("(") != -1) {
+				var parts = start.split("(");
+				start = parts[0];
+				expression.children = [expression.children[0], ...parts[1].substring(0, parts[1].length - 1).split(",")];
+			} else {
+				expression.children.splice(1, 1);
+			}
+			return "_" + start;
 		},
 		process: function(expression) {
-
+			modifier(expression.children);
 		}
 	}
 ];
@@ -116,6 +124,9 @@ var operators = [
 var functionOperator = {
 	type: type.var,
 	number: -1,
+	start: function(expression) {
+		return functionToId(expression.children.splice(0, 1)[0]);
+	},
 	process: function(expression) {
 		var f = getFunction(expression.start);
 		var n = expression.children.length;
@@ -128,7 +139,7 @@ var functionOperator = {
 				expression.children.splice(f.argc, 1);
 			}
 		}
-		varify(expression);
+		varify(expression.children);
 	}
 }
 
@@ -213,7 +224,6 @@ class Expression {
 		this.string = string;
 		this.children = [];
 		this.location = location;
-		this.start = "";
 		this.end = ")";
 
 		var groups = [];
@@ -267,17 +277,11 @@ class Expression {
 
 		if (groups.length > 0 && !hasOperator) {
 			if (groupChar == "(" && this.string != "()") {
-				this.children = groups;
+				this.children = [this.string.split("(")[0], ...groups[0].split(",")];
 				this.operator = functionOperator;
-				this.start = functionToId(this.string.split("(")[0]);
 			} else if (groupChar == "[" && this.string != "[]") {
 				this.children = [this.string.split("[")[0], groups[0]];
 				this.operator = accessOperator;
-				if (typeof this.operator.start === "function") {
-					this.start = this.operator.start(expression);
-				} else {
-					this.start = this.operator.start;
-				}
 			}
 			this.type = this.operator.type;
 		} else {
@@ -287,17 +291,10 @@ class Expression {
 			for (var symbol in symbols) {
 				var parts = util.split(this.string, symbol, Object.keys(symbols));
 				if (parts.length > 1) {
-					// for (var i = 0; i < parts.length; i++) {
-					// 	if (parts[i].length == 0) {
-					// 		parts.splice(i, 1);
-					// 		i--;
-					// 	}
-					// }
 					this.children = parts;
 					this.symbol = symbol;
 					this.operator = symbols[symbol];
 					this.type = this.operator.type;
-					this.start = this.operator.start;
 					break;
 				}
 			}
@@ -320,6 +317,15 @@ class Expression {
 				this.children[i] = this.children[i].replace("\"\"", "\"" + strings[0] + "\"");
 				strings.shift();
 			}
+		}
+
+		if (typeof this.operator.start === "function") {
+			this.start = this.operator.start(this);
+		} else {
+			this.start = this.operator.start;
+		}
+
+		for (var i = 0; i < this.children.length; i++) {
 			if (this.children[i].length > 0) {
 				if (util.isExpression(this.children[i])) {
 					this.children[i] = new Expression(this.children[i], location);
