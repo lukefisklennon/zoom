@@ -1,3 +1,0 @@
-string = "first"
-print(string.length)
-print("second".length)

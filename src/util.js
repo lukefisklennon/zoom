@@ -69,7 +69,7 @@ module.exports = {
 		return (((s[0] == "\"") && (s[s.length - 1] == "\"")) || ((s[0] == "'") && (s[s.length - 1] == "'")));
 	},
 	isArray: function(s) {
-		return (s[0] == "[" && s[s.length - 1] == "]");
+		return (s[0] == "{" && s[s.length - 1] == "}");
 	},
 	containsOperator: function(s) {
 		for (var symbol in global.symbols) {
