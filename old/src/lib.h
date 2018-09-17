@@ -1,6 +1,6 @@
 #include <iostream>
 
-void print(Var *v, bool endLine) {
+void __print(Var *v, bool endLine) {
 	switch (v->type) {
 	case STRING:
 		std::cout << v->string;
@@ -22,13 +22,13 @@ void print(Var *v, bool endLine) {
 }
 
 Var print(Var var) {
-	print(&var, true);
+	__print(&var, true);
 	return Var();
 }
 
 Var input(Var var) {
 	if (var.type != UNDEFINED) {
-		print(&var, false);
+		__print(&var, false);
 	}
 	String in;
 	std::getline(std::cin, in);
@@ -69,17 +69,9 @@ Var _length(Var *v) {
 	return Var();
 }
 
-Var _length(Var v) {
-	return _length(&v);
-}
-
 Var _append(Var *v, Var item) {
 	if (v->type == ARRAY) {
 		v->array.push_back(item);
 	}
 	return Var();
-}
-
-Var _append(Var v) {
-	return _append(&v);
 }

@@ -5,6 +5,9 @@ struct Number {
 	Number(int n) {
 		value = n;
 	}
+	Number *operator&() {
+		return this;
+	}
 };
 
 void print(Number *number) {

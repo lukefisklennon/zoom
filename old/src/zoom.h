@@ -33,44 +33,27 @@
 
 typedef unsigned char byte;
 
-struct Var;
+class Var;
 typedef double Number;
 typedef bool Boolean;
 typedef std::string String;
 typedef std::vector<Var> Array;
 
 void assign(Var *v1, Var *v2);
-void assign(Var *v1, Var v2);
 void assign(Var *v, Number n);
 void assign(Var *v, Boolean b);
 void assign(Var *v, String s);
 void assign(Var *v, const char *s);
 void assign(Var *v, const std::initializer_list<Var>& a);
 Var access(Var *v, Var *key);
-Var access(Var *v, Var key);
 bool compare(bool inverse, Var *v1, Var *v2);
-bool compare(bool inverse, Var v1, Var v2);
-bool compare(bool inverse, Var *v1, Var v2);
-bool compare(bool inverse, Var v1, Var *v2);
 bool gt(bool inverse, Var *v1, Var *v2);
-bool gt(bool inverse, Var v1, Var v2);
-bool gt(bool inverse, Var *v1, Var v2);
-bool gt(bool inverse, Var v1, Var *v2);
 bool lt(bool inverse, Var *v1, Var *v2);
-bool lt(bool inverse, Var v1, Var v2);
-bool lt(bool inverse, Var *v1, Var v2);
-bool lt(bool inverse, Var v1, Var *v2);
 Number toNumber(Var *v);
 Var calc(byte operation, ARGS);
 Var mcalc(byte operation, Var *v1, Var *v2);
-Var mcalc(byte operation, Var v1, Var v2);
-Var mcalc(byte operation, Var *v1, Var v2);
-Var mcalc(byte operation, Var v1, Var *v2);
 Var concat(ARGS);
 Var mconcat(Var *v1, Var *v2);
-Var mconcat(Var v1, Var v2);
-Var mconcat(Var *v1, Var v2);
-Var mconcat(Var v1, Var *v2);
 bool toBoolean(Var *v);
 bool toBoolean(Number n);
 bool toBoolean(Boolean b);
@@ -79,7 +62,8 @@ void print(Var *v, bool endLine);
 Var print(Var var);
 Var input(Var var);
 
-struct Var {
+class Var {
+public:
 	byte type;
 	Number number;
 	Boolean boolean;
@@ -100,6 +84,9 @@ struct Var {
 				break;
 			}
 		}
+	}
+	Var *operator&() {
+		return this;
 	}
 	Var() {
 		type = UNDEFINED;
@@ -146,10 +133,6 @@ void assign(Var *v1, Var* v2) {
 			break;
 		}
 	}
-}
-
-void assign(Var *v1, Var v2) {
-	assign(v1, &v2);
 }
 
 void assign(Var *v, Number n) {
@@ -213,18 +196,6 @@ bool compare(bool inverse, Var *v1, Var *v2) {
 	return result;
 }
 
-bool compare(bool inverse, Var v1, Var v2) {
-	return compare(inverse, &v1, &v2);
-}
-
-bool compare(bool inverse, Var *v1, Var v2) {
-	return compare(inverse, v1, &v2);
-}
-
-bool compare(bool inverse, Var v1, Var *v2) {
-	return compare(inverse, &v1, v2);
-}
-
 bool gt(bool inverse, Var *v1, Var *v2) {
 	bool result = v1->type == v2->type;
 	if (result) {
@@ -241,18 +212,6 @@ bool gt(bool inverse, Var *v1, Var *v2) {
 	return result;
 }
 
-bool gt(bool inverse, Var v1, Var v2) {
-	return gt(inverse, &v1, &v2);
-}
-
-bool gt(bool inverse, Var *v1, Var v2) {
-	return gt(inverse, v1, &v2);
-}
-
-bool gt(bool inverse, Var v1, Var *v2) {
-	return gt(inverse, &v1, v2);
-}
-
 bool lt(bool inverse, Var *v1, Var *v2) {
 	bool result = v1->type == v2->type;
 	if (result) {
@@ -267,18 +226,6 @@ bool lt(bool inverse, Var *v1, Var *v2) {
 	}
 	if (inverse) result = !result;
 	return result;
-}
-
-bool lt(bool inverse, Var v1, Var v2) {
-	return lt(inverse, &v1, &v2);
-}
-
-bool lt(bool inverse, Var *v1, Var v2) {
-	return lt(inverse, v1, &v2);
-}
-
-bool lt(bool inverse, Var v1, Var *v2) {
-	return lt(inverse, &v1, v2);
 }
 
 Number toNumber(Var *v) {
@@ -335,23 +282,8 @@ Var calc(byte operation, ARGS) {
 }
 
 Var mcalc(byte operation, Var *v1, Var *v2) {
-	assign(v1, calc(operation, 2, *v1, *v2));
+	assign(v1, &calc(operation, 2, *v1, *v2));
 	return *v1;
-}
-
-Var mcalc(byte operation, Var v1, Var v2) {
-	assign(&v1, calc(operation, 2, v1, v2));
-	return v1;
-}
-
-Var mcalc(byte operation, Var *v1, Var v2) {
-	assign(v1, calc(operation, 2, *v1, v2));
-	return *v1;
-}
-
-Var mcalc(byte operation, Var v1, Var *v2) {
-	assign(&v1, calc(operation, 2, v1, *v2));
-	return v1;
 }
 
 Var concat(ARGS) {
@@ -375,23 +307,8 @@ Var concat(ARGS) {
 }
 
 Var mconcat(Var *v1, Var *v2) {
-	assign(v1, concat(2, *v1, *v2));
+	assign(v1, &concat(2, *v1, *v2));
 	return *v1;
-}
-
-Var mconcat(Var v1, Var v2) {
-	assign(&v1, concat(2, v1, v2));
-	return v1;
-}
-
-Var mconcat(Var *v1, Var v2) {
-	assign(v1, concat(2, *v1, v2));
-	return *v1;
-}
-
-Var mconcat(Var v1, Var *v2) {
-	assign(&v1, concat(2, v1, *v2));
-	return v1;
 }
 
 bool toBoolean(Var *v) {

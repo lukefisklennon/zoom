@@ -32,7 +32,7 @@ var operators = [
 		number: 2,
 		start: "assign",
 		process: function(expression) {
-			addressify(expression.children);
+			rawToPointers(expression.children);
 		}
 	},
 	{
@@ -68,7 +68,7 @@ var operators = [
 		number: 2,
 		start: "mcalc",
 		process: function(expression) {
-			modifier(expression.children);
+			rawToPointers(expression.children);
 			expression.children.unshift(calcNames[expression.symbol[0]]);
 		}
 	},
@@ -78,7 +78,7 @@ var operators = [
 		number: 2,
 		start: "mconcat",
 		process: function(expression) {
-			modifier(expression.children);
+			rawToPointers(expression.children);
 		}
 	},
 	{
@@ -139,7 +139,7 @@ var functionOperator = {
 				expression.children.splice(f.argc, 1);
 			}
 		}
-		varify(expression.children);
+		rawToVars(expression.children);
 	}
 }
 
@@ -148,16 +148,16 @@ var accessOperator = {
 	number: 2,
 	start: "access",
 	process: function(expression) {
-		modifier(expression.children);
+		rawToPointers(expression.children);
 	}
 }
 
 function variadic(children) {
-	varify(children);
+	rawToVars(children);
 	children.unshift(String(children.length));
 }
 
-function varify(children) {
+function rawToVars(children) {
 	for (var i = 0; i < children.length; i++) {
 		if (children[i].type != "VAR") {
 			if (children[i] instanceof Expression) {
@@ -170,22 +170,19 @@ function varify(children) {
 	}
 }
 
-function addressify(children) {
+function varsToPointers(children) {
 	for (var i = 0; i < children.length; i++) {
-		if (children[i] instanceof Value && children[i].type == "VAR") {
-			children[i].string = "&" + children[i].string;
-		}
+		children[i].prepend = "&";
 	}
 }
 
-function modifier(children) {
-	varify(children);
-	addressify(children);
+function rawToPointers(children) {
+	rawToVars(children);
+	varsToPointers(children);
 }
 
 function comparison(expression, symbols) {
-	varify(expression.children);
-	addressify(expression.children);
+	rawToVars(expression.children);
 	if (expression.symbol == symbols[0]) {
 		expression.children.unshift("false");
 	} else if (expression.symbol == symbols[1]) {
@@ -359,6 +356,9 @@ module.exports = function(string, location, vtid, ftid, gf) {
 				var a = [expression.start + "("];
 				expression.operator.process(parts[i]);
 				for (var j = 0; j < expression.children.length; j++) {
+					if (typeof expression.children[j] === "object" && "prepend" in expression.children[j]) {
+						a.push(expression.children[j].prepend);
+					}
 					a.push(expression.children[j]);
 					if (j < expression.children.length - 1) {
 						a.push(",");

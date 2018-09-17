@@ -34,12 +34,7 @@ var keywords = {
 	},
 	if: {
 		start: function(block) {
-			var string = "if(toBoolean(";
-			if (util.isVar(block.first)) {
-				string += "&";
-			}
-			string += block.first + ")){";
-			return string;
+			return "if(toBoolean(&" + block.first + ")){";
 		}
 	},
 	else: {
