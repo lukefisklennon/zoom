@@ -9,5 +9,4 @@ number = numberStart + numberDecimal
 string = ["\"", "'"]
 brackets = ["()", "[]", "{}"]
 symbols = ["=", "==", "!=", "<", ">", "<=", ">=", "+=", "-=", "*=", "/=", "+", "-", "*", "/", "%", ",", "."]
-for pair in brackets: symbols += list(pair)
-symbols.sort(key = lambda symbol: len(symbol))
+symbols.sort(key = lambda symbol: len(symbol), reverse = True)

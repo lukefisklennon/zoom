@@ -11,7 +11,10 @@ class Token:
 		else:
 			return self.type
 
-# Next: brackets as their own type, prevent multiple terminators, prevent terminators after brackets, add keywords
+class Bracket(Token):
+	def __init__(self, value, index):
+		super().__init__("bracket", value)
+		self.direction = (index * 2 - 1) * -1
 
 def lex(string):
 	string = string.replace("\r\n", "\n").replace("\r", "\n") + " "
@@ -21,7 +24,6 @@ def lex(string):
 	i = 0
 	while i < len(string):
 		c = string[i]
-
 		if not current:
 			if c in syntax.labelStart:
 				current = Token("label", c)
@@ -30,22 +32,28 @@ def lex(string):
 			elif c in syntax.string:
 				current = Token("string", string[i + 1])
 				i += 1
-			elif c in syntax.terminators and not brackets[max(brackets, key = brackets.get)]:
+			elif (c in syntax.terminators and
+				  not brackets[max(brackets, key = brackets.get)] and
+				  len(tokens) > 0 and
+				  not tokens[-1].type in ("terminator", "bracket")):
 				tokens.append(Token("terminator"))
 			else:
-				for symbol in syntax.symbols:
-					sub = string[i : i + len(symbol)]
-					if sub == symbol:
-						bracket = [(pair, pair.index(symbol)) for pair in syntax.brackets if symbol in pair]
-						if bracket:
-							pair, index = bracket[0]
-							if index == 0:
-								brackets[pair] += 1
-							elif index == 1:
-								brackets[pair] -= 1
-						tokens.append(Token("symbol", symbol))
-						i += len(symbol) - 1
+				for pair in syntax.brackets:
+					if c in pair:
+						index = pair.index(c)
+						if index == 0:
+							brackets[pair] += 1
+						elif index == 1:
+							brackets[pair] -= 1
+						tokens.append(Bracket(c, index))
 						break
+				else:
+					for symbol in syntax.symbols:
+						sub = string[i : i + len(symbol)]
+						if sub == symbol:
+							tokens.append(Token("symbol", symbol))
+							i += len(symbol) - 1
+							break
 		else:
 			ended = False
 			if current.type == "label": ended = c not in syntax.label
