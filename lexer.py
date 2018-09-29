@@ -1,19 +1,41 @@
 import syntax
 
 class Token:
-	def __init__(self, type, value = None):
-		self.type = type
+	def __init__(self, value = None):
 		self.value = value
 
 	def __repr__(self):
 		if self.value:
-			return self.type + ": " + self.value
+			return self.__class__.__name__ + ": " + self.value
 		else:
-			return self.type
+			return self.__class__.__name__
+
+	def __eq__(self, other):
+		return type(self) == type(other) and self.value == other.value
+
+class Label(Token):
+	def __init__(self, value):
+		super().__init__(value)
+
+class Symbol(Token):
+	def __init__(self, value):
+		super().__init__(value)
+
+class Number(Token):
+	def __init__(self, value):
+		super().__init__(value)
+
+class String(Token):
+	def __init__(self, value):
+		super().__init__(value)
+
+class Terminator(Token):
+	def __init__(self):
+		super().__init__(None)
 
 class Bracket(Token):
 	def __init__(self, value, index):
-		super().__init__("bracket", value)
+		super().__init__(value)
 		self.direction = (index * 2 - 1) * -1
 
 def lex(string):
@@ -26,17 +48,17 @@ def lex(string):
 		c = string[i]
 		if not current:
 			if c in syntax.labelStart:
-				current = Token("label", c)
+				current = Label(c)
 			elif c in syntax.numberStart:
-				current = Token("number", c)
+				current = Number(c)
 			elif c in syntax.string:
-				current = Token("string", string[i + 1])
+				current = String(string[i + 1])
 				i += 1
 			elif (c in syntax.terminators and
 				  not brackets[max(brackets, key = brackets.get)] and
 				  len(tokens) > 0 and
-				  not tokens[-1].type in ("terminator", "bracket")):
-				tokens.append(Token("terminator"))
+				  not (type(tokens[-1]) is Terminator or type(tokens[-1]) is Bracket)):
+				tokens.append(Terminator())
 			else:
 				for pair in syntax.brackets:
 					if c in pair:
@@ -51,19 +73,19 @@ def lex(string):
 					for symbol in syntax.symbols:
 						sub = string[i : i + len(symbol)]
 						if sub == symbol:
-							tokens.append(Token("symbol", symbol))
+							tokens.append(Symbol(symbol))
 							i += len(symbol) - 1
 							break
 		else:
 			ended = False
-			if current.type == "label": ended = c not in syntax.label
-			if current.type == "string": ended = c in syntax.string
-			if current.type == "number":
+			if type(current) is Label: ended = c not in syntax.label
+			if type(current) is String: ended = c in syntax.string
+			if type(current) is Number:
 				ended = (c not in syntax.number or
 				        (c == syntax.numberDecimal and syntax.numberDecimal in current.value))
 			if ended:
 				tokens.append(current)
-				if current.type != "string": i -= 1
+				if not type(current) is String: i -= 1
 				current = None
 			else:
 				current.value += c
