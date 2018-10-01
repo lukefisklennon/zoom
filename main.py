@@ -1,8 +1,16 @@
 import sys
+import os
 from lexer import lex
 import tree
+from render import render
 
-with open(sys.argv[1], "r") as file: input = file.read().strip()
+name = sys.argv[1]
+with open(name, "r") as file: input = file.read().strip()
 
 tokens = lex(input)
-print("Result:", tree.Block(tokens))
+block = tree.Block(tokens)
+output = render(block)
+
+with open(name.split(".")[0] + ".cpp", "w") as file: file.write(output)
+
+os.system("g++ -std=c++11 file.cpp -o file >/dev/null 2>&1")
